@@ -1,0 +1,1211 @@
+<html>
+	<head>
+		<meta charset="utf-8">
+		<title>(Simple) Cycle Environment Assessment Tool</title>
+		<style>
+			body {
+				font-family: "helvetica", sans-serif;
+			}
+			button {
+				background-color: #ddd;
+				border-radius: 8px;
+				height: 50px;
+				font-size: 14px;
+				border: 1px solid #96d1f8;
+			}
+			button.button2 {
+				width: 368px;
+			}
+			button.button3 {
+				width: 244px;
+			}
+			button.button4 {
+				width: 182px;
+			}
+			button.button5 {
+				width: 145px;
+			}
+			button.button6 {
+				width: 120px;
+			}
+			button:active {
+				background-color: #ddd;
+			}
+			td.left_element {
+				text-align: right;
+				padding-right: 20px;
+				width: 20%;
+			}
+			tr.auto_hide {
+				display: none;
+			}
+		</style>
+		<script>
+
+//////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////
+
+var state_oof = 0;
+var state_msl = 0;
+var state_pcu = 0;
+var state_seg = 0;
+var separation_score = -1;
+
+var state_bar = 0;
+var state_gap = 0;
+var state_way = 0;
+var state_one = 0;
+var state_two = 0;
+var state_dir = 0;
+var state_sur = 0;
+var effectiveness_score = -1;
+
+var overall_score = 0;
+
+//////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////
+
+var separation_scores = {
+	// ≤20 mph
+	1: {
+		1: [1, 1, 2],
+		2: [1, 2, 3],
+		3: [2, 3, 4],
+		4: [3, 4, 5],
+		5: [3, 5, 5]
+	},
+	// 30 mph
+	2: {
+		1: [1, 2, 3],
+		2: [2, 3, 4],
+		3: [2, 4, 5],
+		4: [3, 4, 6],
+		5: [3, 5, 6]
+	},
+	// ≥40 mpg
+	3: {
+		1: [1, 2, 3],
+		2: [2, 3, 5],
+		3: [2, 4, 5],
+		4: [3, 4, 6],
+		5: [4, 5, 6]
+	}
+};
+
+var score_labels = ['Very Low', 'Low', 'Medium', 'High', 'High+'];
+
+var overall_scores = {
+	0: [0, 0, 1, 1, 1],
+	1: [0, 1, 2, 2, 2],
+	2: [1, 2, 3, 3, 3],
+	3: [1, 2, 3, 4, 4],
+	4: [1, 2, 3, 4, 5]
+};
+
+var overall_descriptions = [
+	'complete failure',
+	'unacceptable',
+	'very poor quality, unlikely to be used',
+	'has some value but still needs improvement',
+	'good practice, effective and should appeal to all',
+	'world class, best practice, built for the future'
+];
+
+var speeds = [
+	'',
+	'≤20 mph',
+	'30 mph'
+];
+
+var pcus = [
+	'',
+	'≤1000 PCUs',
+	'≤2000 PCUs',
+	'≤5000 PCUs',
+	'≤10000 PCUs'
+];
+
+var segregations = [
+	'',
+	'none',
+	'advisory cycle lanes',
+	'mandatory cycle lanes',
+	'hybrid cycle lanes',
+	'lightly protected cycle lanes',
+	'fully protected cycle lanes'
+];
+
+var gaps = [
+	'',
+	'',
+	'0.8m to 1.2m',
+	'1.2m to 1.5m',
+	'>1.5m'
+];
+
+var one_widths = [
+	'',
+	'',
+	'≥1.5m',
+	'≥1.8m',
+	'≥2.1m',
+	'≥2.5m'
+];
+
+var two_widths = [
+	'',
+	'',
+	'≥2.5m',
+	'≥3.0m',
+	'≥3.5m',
+	'≥4.0m'
+];
+
+var directness = [
+	'',
+	'',
+	'within 25%',
+	'within 10%',
+	'shortest route'
+];
+
+var surfaces = [
+	'',
+	'',
+	'hard-packed',
+	'smooth',
+	'very smooth'
+];
+
+//////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////
+
+function analyse_failure (element)
+{
+	var score;
+	var best_score;
+	var suggestions = {1: [], 2: [], 3: [], 4: [], 5: []};
+
+	if ((separation_score <= effectiveness_score) && (separation_score <= 3))
+	{
+		// analyse separation
+
+		best_score = overall_score;
+
+		for (var i = state_msl; i >= 1; i --)
+		{
+			score = calculate_overall_score (calculate_separation_score (state_oof, i, state_pcu, state_seg), effectiveness_score);
+
+			if (score > best_score)
+			{
+				suggestions[score].push ('Change maximum speed to ' + speeds[i] + '.');
+
+				best_score = score;
+			}
+		}
+
+		best_score = overall_score;
+
+		for (var i = state_pcu; i >= 1; i --)
+		{
+			score = calculate_overall_score (calculate_separation_score (state_oof, state_msl, i, state_seg), effectiveness_score);
+
+			if (score > best_score)
+			{
+				suggestions[score].push ('Change maximum number of vehilces to ' + pcus[i] + '.');
+				
+				best_score = score;
+			}
+		}
+
+		best_score = overall_score;
+
+		for (var i = state_seg; i <= 6; i ++)
+		{
+			score = calculate_overall_score (calculate_separation_score (state_oof, state_msl, state_pcu, i), effectiveness_score);
+
+			if (score > best_score)
+			{
+				suggestions[score].push ('Change segregation to ' + segregations[i] + '.');
+
+				best_score = score;
+			}
+		}
+	}
+	
+	if ((effectiveness_score <= separation_score) && (effectiveness_score <= 3))
+	{
+		// analyse effectiveness
+
+		best_score = overall_score;
+
+		score = calculate_overall_score (separation_score, calculate_effectiveness_score (2, state_gap, state_dir, state_one, state_two, state_sur, state_way));
+
+		if (score > best_score)
+		{
+			suggestions[score].push ('Moving barriers over 5m from turn or junction.');
+
+			best_score = score;
+		}
+
+		score = calculate_overall_score (separation_score, calculate_effectiveness_score (3, state_gap, state_dir, state_one, state_two, state_sur, state_way));
+
+		if (score > best_score)
+		{
+			suggestions[score].push ('Removing barriers.');
+
+			best_score = score;
+		}
+
+		best_score = overall_score;
+
+		for (var i = 2; i <= 4; i ++)
+		{
+			score = calculate_overall_score (separation_score, calculate_effectiveness_score (state_bar, i, state_dir, state_one, state_two, state_sur, state_way));
+
+			if (score > best_score)
+			{
+				suggestions[score].push ('Change gap at barriers to ' + gaps[i] + '.');
+
+				best_score = score;
+			}
+		}
+
+		if (state_way == 1)
+		{
+			best_score = overall_score;
+
+			for (var i = 2; i <= 5; i ++)
+			{
+				score = calculate_overall_score (separation_score, calculate_effectiveness_score (state_bar, state_gap, state_dir, i, state_two, state_sur, state_way));
+
+				if (score > best_score)
+				{
+					suggestions[score].push ('Change width to ' + one_widths[i] + '.');
+
+					best_score = score;
+				}
+			}
+		}
+		else if (state_way == 2)
+		{
+			best_score = overall_score;
+
+			for (var i = 2; i <= 5; i ++)
+			{
+				score = calculate_overall_score (separation_score, calculate_effectiveness_score (state_bar, state_gap, state_dir, state_one, i, state_sur, state_way));
+
+				if (score > best_score)
+				{
+					suggestions[score].push ('Change width to ' + two_widths[i] + '.');
+
+					best_score = score;
+				}
+			}
+		}
+
+		best_score = overall_score;
+
+		for (var i = 2; i <= 4; i ++)
+		{
+			score = calculate_overall_score (separation_score, calculate_effectiveness_score (state_bar, state_gap, i, state_one, state_two, state_sur, state_way));
+
+			if (score > best_score)
+			{
+				suggestions[score].push ('Change directness to ' + directness[i] + '.');
+
+				best_score = score;
+			}
+		}
+
+		best_score = overall_score;
+
+		for (var i = 2; i <= 4; i ++)
+		{
+			score = calculate_overall_score (separation_score, calculate_effectiveness_score (state_bar, state_gap, state_dir, state_one, state_two, i, state_way));
+
+			if (score > best_score)
+			{
+				suggestions[score].push ('Change surface to ' + surfaces[i] + '.');
+
+				best_score = score;
+			}
+		}
+	}
+
+	var total_suggestions = 0;
+
+	for (var i = 1; i <= 5; i ++)
+	{
+		total_suggestions += suggestions[i].length;
+	}
+
+	if ((total_suggestions == 0) && (overall_score < 5))
+	{
+		var permutations = [];
+
+		if (state_oof == 1)
+		{
+			for (var r1 = state_msl; r1 >= 1; r1 --)
+			{
+				for (var r2 = state_pcu; r2 >= 1; r2 --)
+				{
+					for (var r3 = state_seg; r3 <= 6; r3 ++)
+					{
+						for (var i1 = state_bar; i1 <= 3; i1 ++)
+						{
+							var bar_gap = state_gap;
+
+							if (state_bar == 3)
+							{
+								bar_gap = 4;
+							}
+
+							for (var i2 = bar_gap; i2 <= 4; i2 ++)
+							{
+								for (var i4 = state_dir; i4 <= 4; i4 ++)
+								{
+									for (var i5 = state_sur; i5 <= 4; i5 ++)
+									{
+										if (state_way == 1)
+										{
+											for (var i3 = state_one; i3 <= 5; i3 ++)
+											{
+												permutations.push ([r1, r2, r3, i1, i2, i3, i4, i5]);
+											}
+										}
+										else if (state_way == 2)
+										{
+											for (var i3 = state_two; i3 <= 5; i3 ++)
+											{
+												permutations.push ([r1, r2, r3, i1, i2, i3, i4, i5]);
+											}
+										}
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+		else
+		{
+			for (var i1 = state_bar; i1 <= 3; i1 ++)
+			{
+				var bar_gap = state_gap;
+
+				if (state_bar == 3)
+				{
+					bar_gap = 4;
+				}
+
+				for (var i2 = bar_gap; i2 <= 4; i2 ++)
+				{
+					for (var i4 = state_dir; i4 <= 4; i4 ++)
+					{
+						for (var i5 = state_sur; i5 <= 4; i5 ++)
+						{
+							if (state_way == 1)
+							{
+								for (var i3 = state_one; i3 <= 5; i3 ++)
+								{
+									permutations.push ([state_msl, state_pcu, state_seg, i1, i2, i3, i4, i5]);
+								}
+							}
+							else if (state_way == 2)
+							{
+								for (var i3 = state_two; i3 <= 5; i3 ++)
+								{
+									permutations.push ([state_msl, state_pcu, state_seg, i1, i2, i3, i4, i5]);
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+
+		best_score = overall_score;
+
+		for (var i = 0; i < permutations.length; i ++)
+		{
+			r1 = permutations[i][0];
+			r2 = permutations[i][1];
+			r3 = permutations[i][2];
+			i1 = permutations[i][3];
+			i2 = permutations[i][4];
+			i3 = permutations[i][5];
+			i4 = permutations[i][6];
+			i5 = permutations[i][7];
+
+			score = calculate_overall_score (calculate_separation_score (state_oof, r1, r2, r3), calculate_effectiveness_score (i1, i2, i4, i3, i3, i5, state_way));
+
+			if (score > best_score)
+			{
+				var text = 'Change ';
+				var and = '';
+
+				if (r1 != state_msl)
+				{
+					text += and + 'maximum speed to ' + speeds[r1];
+					and = ' and ';
+				}
+
+				if (r2 != state_pcu)
+				{
+					text += and + 'maximum number of vehicles to ' + pcus[r2];
+					and = ' and ';
+				}
+
+				if (r3 != state_seg)
+				{
+					text += and + 'infrastructure type to ' + segregations[r3];
+					and = ' and ';
+				}
+
+				if ((i1 != state_bar) || (i2 != state_gap))
+				{
+					if ((i1 != state_bar) && (i1 == 2))
+					{
+						text += and + 'move barrier to over 5m from turn or junction';
+						and = ' and ';
+					}
+
+					if ((i1 != 3) && (i2 != state_gap))
+					{
+						text += and + 'barrier gap to ' + gaps[i2];
+						and = ' and ';
+					}
+				}
+
+				if ((state_way == 1) && (i3 != state_one))
+				{
+					text += and + 'one-way width to ' + one_widths[i3];
+					and = ' and ';
+				}
+
+				if ((state_way == 2) && (i3 != state_two))
+				{
+					text += and + 'two-way width to ' + two_widths[i3];
+					and = ' and ';
+				}
+
+				if (i4 != state_dir)
+				{
+					text += and + 'directness to ' + directness[i4];
+					and = ' and ';
+				}
+
+				if (i5 != state_sur)
+				{
+					text += and + 'surface to ' + surfaces[i5];
+					and = ' and ';
+				}
+
+				text += '.';
+
+				suggestions[score].push (text);
+
+				best_score = score;
+			}
+		}
+	}
+
+	var html = '';
+
+	for (var i = 5; i >= 1; i --)
+	{
+		if (suggestions[i].length)
+		{
+			html += 'To obtain score of ' + i + '/5:<br>';
+			for (var j = 0; j < suggestions[i].length; j ++)
+			{
+				html += '<li>' + suggestions[i][j] + '<br>';
+			}
+		}
+	}
+
+	element.innerHTML = html;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////
+
+function calculate_overall_score (sep, eff)
+{
+	if ((sep == -1) || (eff == -1))
+	{
+		return -1;
+	}
+
+	return overall_scores[sep][eff];
+}
+
+//////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////
+
+function update_overall_score ()
+{
+	var computable;
+
+	overall_score = calculate_overall_score (separation_score, effectiveness_score);
+
+	var score_element = document.getElementById ('overall_score');
+	var description_element = document.getElementById ('overall_description');
+//	var detailed_element = document.getElementById ('detailed_scores');
+	var analysis_element = document.getElementById ('analysis');
+
+	if (overall_score >= 0)
+	{
+		score_element.innerHTML = 'Score ' + overall_score + '/5';
+		description_element.innerHTML = overall_descriptions[overall_score];
+
+//		detailed_element.innerHTML = "oof:" + oof + ", msl:" + msl + ", pcu:" + pcu + ", seg:" + seg + ", bar:" + bar + ", gap:" + gap + ", way:" + way + ", one:" + one + ", two:" + two + ", dir:" + dir + ", sur:" + sur;
+
+//		detailed_element.innerHTML += "<br>";
+
+//		detailed_element.innerHTML += "sep:" + separation_score + ", eff:" + effectiveness_score;
+
+		analyse_failure (analysis_element);
+	}
+	else
+	{
+		score_element.innerHTML = '';
+		description_element.innerHTML = '';
+//		detailed_element.innerHTML = '';
+		analysis_element.innerHTML = '';
+	}
+}
+
+//////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////
+
+function calculate_separation_score (oof, msl, pcu, seg)
+{
+	var computable;
+
+	computable = true;
+
+	if (oof == 0)
+	{
+		computable = false;
+	}
+	else if ((oof == 1) && ((msl == 0) || (pcu == 0) || (seg == 0)))
+	{
+		computable = false;
+	}
+
+	if (computable)
+	{
+		if (oof == 2)
+		{
+			return 4;
+		}
+		else
+		{
+			var requirements = separation_scores[msl][pcu];
+
+			if (seg > requirements[2])
+			{
+				return 4;
+			}
+			else if (seg == requirements[2])
+			{
+				return 3;
+			}
+			else if (seg >= requirements[1])
+			{
+				return 2;
+			}
+			else if (seg >= requirements[0])
+			{
+				return 1;
+			}
+			else
+			{
+				return 0;
+			}
+		}
+	}
+	else
+	{
+		return -1;
+	}
+}
+
+//////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////
+
+function update_separation_score ()
+{
+	separation_score = calculate_separation_score (state_oof, state_msl, state_pcu, state_seg);
+
+//	var element = document.getElementById ('separation_score');
+//
+//	if (separation_score >= 0)
+//	{
+//		element.innerHTML = score_labels[separation_score];
+//	}
+//	else
+//	{
+//		element.innerHTML = '';
+//	}
+
+	update_overall_score ();
+}
+
+//////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////
+
+function calculate_effectiveness_score (bar, gap, dir, one, two, sur, way)
+{
+	var effective_bar;
+	var effective_width;
+	var computable;
+
+	computable = true;
+
+	if ((bar == 0) || (dir == 0) || (sur == 0) || (way == 0))
+	{
+		computable = false;
+	}
+	else if ((bar < 3) && (gap == 0))
+	{
+		computable = false;
+	}
+	else if ((way == 1) && (one == 0))
+	{
+		computable = false;
+	}
+	else if ((way == 2) && (two == 0))
+	{
+		computable = false;
+	}
+
+	if (computable)
+	{
+		if (bar == 3)
+		{
+			effective_bar = 4;
+		}
+		else if (bar == 2)
+		{
+			effective_bar = gap;
+		}
+		else if (bar == 1)
+		{
+			effective_bar = gap - 1;
+		}
+
+		if (way == 1)
+		{
+			effective_width = one - 1;
+		}
+		else if (way == 2)
+		{
+			effective_width = two - 1;
+		}
+
+		return Math.min (effective_bar, effective_width, dir, sur);
+	}
+	else
+	{
+		return -1;
+	}
+}
+
+//////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////
+
+function update_effectiveness_score ()
+{
+	effectiveness_score = calculate_effectiveness_score (state_bar, state_gap, state_dir, state_one, state_two, state_sur, state_way);
+
+//	var element = document.getElementById ('effectiveness_score');
+//
+//	if (effectiveness_score >= 0)
+//	{
+//		element.innerHTML = score_labels[effectiveness_score];
+//	}
+//	else
+//	{
+//		element.innerHTML = '';
+//	}
+
+	update_overall_score ();
+}
+
+//////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////
+
+function hide_tables (name, on)
+{
+	var table_rows = document.getElementsByTagName ("tr");
+
+	for (var i = 0; i < table_rows.length; i ++)
+	{
+		var tr = table_rows[i];
+
+		if (tr.id == name)
+		{
+			if (on)
+			{
+				tr.style.display = 'none';
+			}
+			else
+			{
+				tr.style.display = 'table-row';
+			}
+		}
+	}
+}
+
+//////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////
+
+function click_button (ev)
+{
+	var input = ev.target.id;
+	var category_num = input.split(" ");
+	var category = category_num[0];
+	var num = category_num[1];
+
+	if (category == 'oof')
+	{
+		state_oof = Math.floor(num);
+
+		update_separation_score ();
+
+		if (state_oof == 2)
+		{
+			hide_tables ('onoff', true);
+		}
+		else
+		{
+			hide_tables ('onoff', false);
+		}
+	}
+
+	if (category == 'msl')
+	{
+		state_msl = Math.floor(num);
+
+		update_separation_score ();
+	}
+
+	if (category == 'pcu')
+	{
+		state_pcu = Math.floor(num);
+
+		update_separation_score ();
+	}
+
+	if (category == 'seg')
+	{
+		state_seg = Math.floor(num);
+
+		update_separation_score ();
+	}
+
+	if (category == 'bar')
+	{
+		state_bar = Math.floor(num);
+
+		update_effectiveness_score ();
+
+		if ((state_bar == 1) || (state_bar == 2))
+		{
+			hide_tables ('gaps', false);
+		}
+		else
+		{
+			hide_tables ('gaps', true);
+		}
+	}
+
+	if (category == 'gap')
+	{
+		state_gap = Math.floor(num);
+
+		update_effectiveness_score ();
+	}
+
+	if (category == 'way')
+	{
+		state_way = Math.floor(num);
+
+		update_effectiveness_score ();
+
+		if (state_way == 1)
+		{
+			hide_tables ('oneway', false);
+			hide_tables ('twoway', true);
+		}
+		else
+		{
+			hide_tables ('oneway', true);
+			hide_tables ('twoway', false);
+		}
+	}
+
+	if (category == 'one')
+	{
+		state_one = Math.floor(num);
+
+		update_effectiveness_score ();
+	}
+
+	if (category == 'two')
+	{
+		state_two = Math.floor(num);
+
+		update_effectiveness_score ();
+	}
+
+	if (category == 'sur')
+	{
+		state_sur = Math.floor(num);
+
+		update_effectiveness_score ();
+	}
+
+	if (category == 'dir')
+	{
+		state_dir = Math.floor(num);
+
+		update_effectiveness_score ();
+	}
+
+	var buttons = document.getElementsByTagName ("button");
+
+	for (var i = 0; i < buttons.length; i ++)
+	{
+		var bcn = buttons[i].id.split(" ");
+		if (bcn[0] == category)
+		{
+			if (bcn[1] == num)
+			{
+				buttons[i].style.backgroundColor = '#33c';
+				buttons[i].style.color = '#fff';
+			}
+			else
+			{
+				buttons[i].style.backgroundColor = '#ddd';
+				buttons[i].style.color = '#000';
+			}
+		}
+	}
+
+	update_table_row_backgrounds ();
+}
+
+//////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////
+
+function update_table_row_backgrounds ()
+{
+	var table_rows = document.getElementsByTagName ("tr");
+	var highlight_color = '#fed';
+	var no_highlight_color = '#fff';
+
+	for (var i = 0; i < table_rows.length; i ++)
+	{
+		var tr = table_rows[i];
+		var names = tr.className.split (' ');
+
+		if (names[0] == 'oof')
+		{
+			if (state_oof == 0)
+			{
+				tr.style.backgroundColor = highlight_color;
+			}
+			else
+			{
+				tr.style.backgroundColor = no_highlight_color;				
+			}
+		}
+
+		if (names[0] == 'msl')
+		{
+			if (state_msl == 0)
+			{
+				tr.style.backgroundColor = highlight_color;
+			}
+			else
+			{
+				tr.style.backgroundColor = no_highlight_color;
+			}
+		}
+
+		if (names[0] == 'pcu')
+		{
+			if (state_pcu == 0)
+			{
+				tr.style.backgroundColor = highlight_color;
+			}
+			else
+			{
+				tr.style.backgroundColor = no_highlight_color;
+			}
+		}
+
+		if (names[0] == 'seg')
+		{
+			if (state_seg == 0)
+			{
+				tr.style.backgroundColor = highlight_color;
+			}
+			else
+			{
+				tr.style.backgroundColor = no_highlight_color;
+			}
+		}
+
+		if (names[0] == 'bar')
+		{
+			if (state_bar == 0)
+			{
+				tr.style.backgroundColor = highlight_color;
+			}
+			else
+			{
+				tr.style.backgroundColor = no_highlight_color;
+			}
+		}
+
+		if (names[0] == 'gap')
+		{
+			if (state_gap == 0)
+			{
+				tr.style.backgroundColor = highlight_color;
+			}
+			else
+			{
+				tr.style.backgroundColor = no_highlight_color;
+			}
+		}
+
+		if (names[0] == 'dir')
+		{
+			if (state_dir == 0)
+			{
+				tr.style.backgroundColor = highlight_color;
+			}
+			else
+			{
+				tr.style.backgroundColor = no_highlight_color;
+			}
+		}
+
+		if (names[0] == 'way')
+		{
+			if (state_way == 0)
+			{
+				tr.style.backgroundColor = highlight_color;
+			}
+			else
+			{
+				tr.style.backgroundColor = no_highlight_color;
+			}
+		}
+
+		if (names[0] == 'one')
+		{
+			if (state_one == 0)
+			{
+				tr.style.backgroundColor = highlight_color;
+			}
+			else
+			{
+				tr.style.backgroundColor = no_highlight_color;
+			}
+		}
+
+		if (names[0] == 'two')
+		{
+			if (state_two == 0)
+			{
+				tr.style.backgroundColor = highlight_color;
+			}
+			else
+			{
+				tr.style.backgroundColor = no_highlight_color;
+			}
+		}
+
+		if (names[0] == 'dir')
+		{
+			if (state_dir == 0)
+			{
+				tr.style.backgroundColor = highlight_color;
+			}
+			else
+			{
+				tr.style.backgroundColor = no_highlight_color;
+			}
+		}
+
+		if (names[0] == 'sur')
+		{
+			if (state_sur == 0)
+			{
+				tr.style.backgroundColor = highlight_color;
+			}
+			else
+			{
+				tr.style.backgroundColor = no_highlight_color;
+			}
+		}
+	}
+}
+
+//////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////
+
+function body_onload ()
+{
+	var buttons = document.getElementsByTagName ("button");
+
+	for (var i = 0; i < buttons.length; i ++)
+	{
+		buttons[i].addEventListener ("click", click_button, false);
+	}
+
+	update_table_row_backgrounds ();
+}
+
+//////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////
+
+		</script>
+	</head>
+<body onload="body_onload ();">
+	<h1>(Simple) Cycling Environment Assessment Tool</h1>
+	<table>
+		<tr class="oof">
+			<td class="left_element">On-road or Off-road</td>
+			<td>
+				<button class="button2" id="oof 1">on-road</button>
+				<button class="button2" id="oof 2">off-road</button>
+			</td>
+		
+		<tr id="onoff" class="msl auto_hide">
+			<td class="left_element">Maximum Speed Limit</td>
+			<td>
+				<button class="button3" id="msl 1">≤20 mph</button>
+				<button class="button3" id="msl 2">30 mph</button>
+				<button class="button3" id="msl 3">≥40 mph</button>
+			</td>
+		
+		</tr><tr id="onoff" class="pcu auto_hide">
+			<td class="left_element">Maximum Number of Vehicles</td>
+			<td>
+				<button class="button5" id="pcu 1">≤1000</button>
+				<button class="button5" id="pcu 2">≤2000</button>
+				<button class="button5" id="pcu 3">≤5000</button>
+				<button class="button5" id="pcu 4">≤10000</button>
+				<button class="button5" id="pcu 5">any</button>
+			</td>
+
+		</tr><tr id="onoff" class="seg auto_hide">
+			<td class="left_element">Infrastructure Type</td>
+			<td>
+				<button class="button6" id="seg 1" title="No cycle lane">None</button>
+				<button class="button6" id="seg 2" title="Advisory Cycle Lane">ACL</button>
+				<button class="button6" id="seg 3" title="Mandatory Cycle Lane">MCL</button>
+				<button class="button6" id="seg 4" title="Hybrid or Stepped Cycle Lane">Hybrid</button>
+				<button class="button6" id="seg 5" title="Objects between motor traffic and cycle taffic">Light</button>
+				<button class="button6" id="seg 6" title="Kerb segregation (or &gt;4m spatial separation)">Full</button>
+			</td>
+
+		</tr><tr class="bar">
+			<td class="bar left_element">Barriers</td>
+			<td>
+				<button class="button3" id="bar 1">within 5m of turn or junction</button>
+				<button class="button3" id="bar 2">over 5m from turn or junction</button>
+				<button class="button3" id="bar 3">no barriers</button>
+			</td>
+
+		</tr><tr id="gaps" class="gap auto_hide">
+			<td class="left_element">Barrier Gap</td>
+			<td>
+				<button class="button4" id="gap 1">Gate or &lt;0.8m</button>
+				<button class="button4" id="gap 2">0.8m to 1.2m</button>
+				<button class="button4" id="gap 3">1.2m to 1.5m</button>
+				<button class="button4" id="gap 4">&gt;1.5m</button>
+			</td>
+
+		</tr><tr class="way">
+			<td class="left_element">Directionality</td>
+			<td>
+				<button class="button2" id="way 1">One-way</button>
+				<button class="button2" id="way 2">Two-way</button>
+			</td>
+
+		</tr><tr class="one" id="oneway">
+			<td class="left_element">Effective Width</td>
+			<td>
+				<button class="button5" id="one 1">Narrow</button>
+				<button class="button5" id="one 2">≥1.5m</button>
+				<button class="button5" id="one 3">≥1.8m</button>
+				<button class="button5" id="one 4">≥2.1m</button>
+				<button class="button5" id="one 5">≥2.5m</button>
+			</td>
+
+		</tr><tr id="twoway" class="two auto_hide">
+			<td class="left_element">Effective Width</td>
+			<td>
+				<button class="button5" id="two 1">Narrow</button>
+				<button class="button5" id="two 2">≥2.5m</button>
+				<button class="button5" id="two 3">≥3.0m</button>
+				<button class="button5" id="two 4">≥3.5m</button>
+				<button class="button5" id="two 5">≥4.0m</button>
+			</td>
+
+		</tr><tr class="dir">
+			<td class="left_element">Directness</td>
+			<td>
+				<button class="button4" id="dir 1">within 40%</button>
+				<button class="button4" id="dir 2">within 25%</button>
+				<button class="button4" id="dir 3">within 10%</button>
+				<button class="button4" id="dir 4">shortest route</button>
+			</td>
+
+		</tr><tr class="sur">
+			<td class="left_element">Surface</td>
+			<td>
+				<button class="button4" id="sur 1">unsealed</button>
+				<button class="button4" id="sur 2">hard-packed</button>
+				<button class="button4" id="sur 3">smooth</button>
+				<button class="button4" id="sur 4">very smooth</button>
+			</td>
+		</tr>
+	</table>	
+	<hr>
+		<span style="font-size: 100px;" id="overall_score"></span><br><span id="overall_description" style="font-size: 50px;"></span><p>
+		<hr><p /> <p />
+		<span style="font-size: 25px;" id="analysis"></span>
+<!---
+	<hr>
+		Separation of Motors Score : <span id="separation_score"></span><br>
+		Effectiveness Score : <span id="effectiveness_score"></span>
+	<hr>
+		<span id="detailed_scores"></span>
+/-->
+</body>
+</html>
