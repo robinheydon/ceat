@@ -1,7 +1,7 @@
 <html>
 	<head>
 		<meta charset="utf-8">
-		<title>(Simple) Cycle Environment Assessment Tool</title>
+		<title>CEAT - Cycling Environment Assessment Tool</title>
 		<style>
 			body {
 				font-family: "helvetica", sans-serif;
@@ -53,6 +53,7 @@ var state_seg = 0;
 var separation_score = -1;
 
 var state_bar = 0;
+var state_loc = 0;
 var state_gap = 0;
 var state_way = 0;
 var state_one = 0;
@@ -135,6 +136,13 @@ var segregations = [
 	'hybrid cycle lanes',
 	'lightly protected cycle lanes',
 	'fully protected cycle lanes'
+];
+
+var locations = [
+	'',
+	'at turn or junction',
+	'within 5m of turn or junction',
+	'over 5m of turn of junction'
 ];
 
 var gaps = [
@@ -357,31 +365,36 @@ function analyse_failure (element)
 					{
 						for (var i1 = state_bar; i1 <= 3; i1 ++)
 						{
+							var bar_loc = state_loc;
 							var bar_gap = state_gap;
 
-							if (state_bar == 3)
+							if (state_bar == 2)
 							{
+								bar_loc = 3;
 								bar_gap = 4;
 							}
 
-							for (var i2 = bar_gap; i2 <= 4; i2 ++)
+							for (var i2 = bar_loc; i2 <= 3; i2 ++)
 							{
-								for (var i4 = state_dir; i4 <= 4; i4 ++)
+								for (var i3 = bar_gap; i3 <= 4; i3 ++)
 								{
-									for (var i5 = state_sur; i5 <= 4; i5 ++)
+									for (var i5 = state_dir; i5 <= 4; i5 ++)
 									{
-										if (state_way == 1)
+										for (var i6 = state_sur; i6 <= 4; i6 ++)
 										{
-											for (var i3 = state_one; i3 <= 5; i3 ++)
+											if (state_way == 1)
 											{
-												permutations.push ([r1, r2, r3, i1, i2, i3, i4, i5]);
+												for (var i4 = state_one; i4 <= 5; i4 ++)
+												{
+													permutations.push ([r1, r2, r3, i1, i2, i3, i4, i5, i6]);
+												}
 											}
-										}
-										else if (state_way == 2)
-										{
-											for (var i3 = state_two; i3 <= 5; i3 ++)
+											else if (state_way == 2)
 											{
-												permutations.push ([r1, r2, r3, i1, i2, i3, i4, i5]);
+												for (var i4 = state_two; i4 <= 5; i4 ++)
+												{
+													permutations.push ([r1, r2, r3, i1, i2, i3, i4, i5, i6]);
+												}
 											}
 										}
 									}
@@ -396,31 +409,36 @@ function analyse_failure (element)
 		{
 			for (var i1 = state_bar; i1 <= 3; i1 ++)
 			{
+				var bar_loc = state_loc;
 				var bar_gap = state_gap;
 
 				if (state_bar == 3)
 				{
+					bar_loc = 3;
 					bar_gap = 4;
 				}
 
-				for (var i2 = bar_gap; i2 <= 4; i2 ++)
+				for (var i2 = bar_loc; i2 <= 3; i2 ++)
 				{
-					for (var i4 = state_dir; i4 <= 4; i4 ++)
+					for (var i3 = bar_gap; i3 <= 4; i3 ++)
 					{
-						for (var i5 = state_sur; i5 <= 4; i5 ++)
+						for (var i5 = state_dir; i5 <= 4; i5 ++)
 						{
-							if (state_way == 1)
+							for (var i6 = state_sur; i6 <= 4; i6 ++)
 							{
-								for (var i3 = state_one; i3 <= 5; i3 ++)
+								if (state_way == 1)
 								{
-									permutations.push ([state_msl, state_pcu, state_seg, i1, i2, i3, i4, i5]);
+									for (var i4 = state_one; i4 <= 5; i4 ++)
+									{
+										permutations.push ([state_msl, state_pcu, state_seg, i1, i2, i3, i4, i5, i6]);
+									}
 								}
-							}
-							else if (state_way == 2)
-							{
-								for (var i3 = state_two; i3 <= 5; i3 ++)
+								else if (state_way == 2)
 								{
-									permutations.push ([state_msl, state_pcu, state_seg, i1, i2, i3, i4, i5]);
+									for (var i4 = state_two; i4 <= 5; i4 ++)
+									{
+										permutations.push ([state_msl, state_pcu, state_seg, i1, i2, i3, i4, i5, i6]);
+									}
 								}
 							}
 						}
@@ -436,13 +454,14 @@ function analyse_failure (element)
 			r1 = permutations[i][0];
 			r2 = permutations[i][1];
 			r3 = permutations[i][2];
-			i1 = permutations[i][3];
-			i2 = permutations[i][4];
-			i3 = permutations[i][5];
-			i4 = permutations[i][6];
-			i5 = permutations[i][7];
+			i1 = permutations[i][3]; // bar
+			i2 = permutations[i][4]; // loc
+			i3 = permutations[i][5]; // gap
+			i4 = permutations[i][6]; // one or two
+			i5 = permutations[i][7]; // dir
+			i6 = permutations[i][8]; // sur
 
-			score = calculate_overall_score (calculate_separation_score (state_oof, r1, r2, r3), calculate_effectiveness_score (i1, i2, i4, i3, i3, i5, state_way));
+			score = calculate_overall_score (calculate_separation_score (state_oof, r1, r2, r3), calculate_effectiveness_score (i1, i2, i3, state_way, i4, i4, i5, i6));
 
 			if (score > best_score)
 			{
@@ -467,42 +486,48 @@ function analyse_failure (element)
 					and = ' and ';
 				}
 
-				if ((i1 != state_bar) || (i2 != state_gap))
+				if (i1 != state_bar)
 				{
-					if ((i1 != state_bar) && (i1 == 2))
+					if (i1 == 2)
 					{
-						text += and + 'move barrier to over 5m from turn or junction';
-						and = ' and ';
-					}
-
-					if ((i1 != 3) && (i2 != state_gap))
-					{
-						text += and + 'barrier gap to ' + gaps[i2];
+						text += and + 'barriers to no barriers';
 						and = ' and ';
 					}
 				}
 
-				if ((state_way == 1) && (i3 != state_one))
+				if (i2 != state_loc)
 				{
-					text += and + 'one-way width to ' + one_widths[i3];
+					text += and + 'barrier location to ' + locations[i2];
 					and = ' and ';
 				}
 
-				if ((state_way == 2) && (i3 != state_two))
+				if (i3 != state_gap)
 				{
-					text += and + 'two-way width to ' + two_widths[i3];
+					text += and + 'barrier gap to ' + gaps[i3];
 					and = ' and ';
 				}
 
-				if (i4 != state_dir)
+				if ((state_way == 1) && (i4 != state_one))
 				{
-					text += and + 'directness to ' + directness[i4];
+					text += and + 'one-way width to ' + one_widths[i4];
 					and = ' and ';
 				}
 
-				if (i5 != state_sur)
+				if ((state_way == 2) && (i4 != state_two))
 				{
-					text += and + 'surface to ' + surfaces[i5];
+					text += and + 'two-way width to ' + two_widths[i4];
+					and = ' and ';
+				}
+
+				if (i5 != state_dir)
+				{
+					text += and + 'directness to ' + directness[i5];
+					and = ' and ';
+				}
+
+				if (i6 != state_sur)
+				{
+					text += and + 'surface to ' + surfaces[i6];
 					and = ' and ';
 				}
 
@@ -666,7 +691,7 @@ function update_separation_score ()
 //////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////
 
-function calculate_effectiveness_score (bar, gap, dir, one, two, sur, way)
+function calculate_effectiveness_score (bar, loc, gap, way, one, two, dir, sur)
 {
 	var effective_bar;
 	var effective_width;
@@ -674,11 +699,11 @@ function calculate_effectiveness_score (bar, gap, dir, one, two, sur, way)
 
 	computable = true;
 
-	if ((bar == 0) || (dir == 0) || (sur == 0) || (way == 0))
+	if ((bar == 0) || (way == 0) || (dir == 0) || (sur == 0))
 	{
 		computable = false;
 	}
-	else if ((bar < 3) && (gap == 0))
+	else if ((bar == 1) && ((loc == 0) || (gap == 0)))
 	{
 		computable = false;
 	}
@@ -693,17 +718,24 @@ function calculate_effectiveness_score (bar, gap, dir, one, two, sur, way)
 
 	if (computable)
 	{
-		if (bar == 3)
+		if (bar == 2) // no barriers
 		{
 			effective_bar = 4;
 		}
-		else if (bar == 2)
+		else if (bar == 1) // has barriers
 		{
-			effective_bar = gap;
-		}
-		else if (bar == 1)
-		{
-			effective_bar = gap - 1;
+			if (loc == 1) // at junction
+			{
+				effective_bar = Math.max (gap - 2, 0);
+			}
+			else if (loc == 2) // within 5m of junction
+			{
+				effective_bar = Math.max (gap - 1, 0);
+			}
+			else if (loc == 3) // over 5m from junction
+			{
+				effective_bar = Math.max (gap - 0, 0);
+			}
 		}
 
 		if (way == 1)
@@ -729,7 +761,7 @@ function calculate_effectiveness_score (bar, gap, dir, one, two, sur, way)
 
 function update_effectiveness_score ()
 {
-	effectiveness_score = calculate_effectiveness_score (state_bar, state_gap, state_dir, state_one, state_two, state_sur, state_way);
+	effectiveness_score = calculate_effectiveness_score (state_bar, state_loc, state_gap, state_way, state_one, state_two, state_sur, state_dir);
 
 //	var element = document.getElementById ('effectiveness_score');
 //
@@ -825,19 +857,26 @@ function click_button (ev)
 
 		update_effectiveness_score ();
 
-		if ((state_bar == 1) || (state_bar == 2))
+		if (state_bar == 1)
 		{
-			hide_tables ('gaps', false);
+			hide_tables ('barriers', false);
 		}
 		else
 		{
-			hide_tables ('gaps', true);
+			hide_tables ('barriers', true);
 		}
 	}
 
 	if (category == 'gap')
 	{
 		state_gap = Math.floor(num);
+
+		update_effectiveness_score ();
+	}
+
+	if (category == 'loc')
+	{
+		state_loc = Math.floor(num);
 
 		update_effectiveness_score ();
 	}
@@ -998,6 +1037,18 @@ function update_table_row_backgrounds ()
 			}
 		}
 
+		if (names[0] == 'loc')
+		{
+			if (state_loc == 0)
+			{
+				tr.style.backgroundColor = highlight_color;
+			}
+			else
+			{
+				tr.style.backgroundColor = no_highlight_color;
+			}
+		}
+
 		if (names[0] == 'dir')
 		{
 			if (state_dir == 0)
@@ -1095,7 +1146,7 @@ function body_onload ()
 		</script>
 	</head>
 <body onload="body_onload ();">
-	<h1>(Simple) Cycling Environment Assessment Tool</h1>
+	<h1>Cycling Environment Assessment Tool</h1>
 	<table>
 		<tr class="oof">
 			<td class="left_element">On-road or Off-road</td>
@@ -1105,7 +1156,7 @@ function body_onload ()
 			</td>
 		
 		<tr id="onoff" class="msl auto_hide">
-			<td class="left_element">Maximum Speed Limit</td>
+			<td class="left_element">Speed Limit</td>
 			<td>
 				<button class="button3" id="msl 1">≤20 mph</button>
 				<button class="button3" id="msl 2">30 mph</button>
@@ -1113,7 +1164,7 @@ function body_onload ()
 			</td>
 		
 		</tr><tr id="onoff" class="pcu auto_hide">
-			<td class="left_element">Maximum Number of Vehicles</td>
+			<td class="left_element">Motor Vehicles<br>(PCUs/day)</td>
 			<td>
 				<button class="button5" id="pcu 1">≤1000</button>
 				<button class="button5" id="pcu 2">≤2000</button>
@@ -1136,12 +1187,19 @@ function body_onload ()
 		</tr><tr class="bar">
 			<td class="bar left_element">Barriers</td>
 			<td>
-				<button class="button3" id="bar 1">within 5m of turn or junction</button>
-				<button class="button3" id="bar 2">over 5m from turn or junction</button>
-				<button class="button3" id="bar 3">no barriers</button>
+				<button class="button2" id="bar 1">barriers in cycleway</button>
+				<button class="button2" id="bar 2">no barriers</button>
 			</td>
 
-		</tr><tr id="gaps" class="gap auto_hide">
+		</tr><tr id="barriers" class="loc auto_hide">
+			<td class="loc left_element">Barrier Location</td>
+			<td>
+				<button class="button3" id="loc 1">at turn or junction</button>
+				<button class="button3" id="loc 2">within 5m of turn or junction</button>
+				<button class="button3" id="loc 3">over 5m from turn or junction</button>
+			</td>
+
+		</tr><tr id="barriers" class="gap auto_hide">
 			<td class="left_element">Barrier Gap</td>
 			<td>
 				<button class="button4" id="gap 1">Gate or &lt;0.8m</button>
@@ -1190,7 +1248,7 @@ function body_onload ()
 			<td class="left_element">Surface</td>
 			<td>
 				<button class="button4" id="sur 1">unsealed</button>
-				<button class="button4" id="sur 2">hard-packed</button>
+				<button class="button4" id="sur 2">lumpy</button>
 				<button class="button4" id="sur 3">smooth</button>
 				<button class="button4" id="sur 4">very smooth</button>
 			</td>
