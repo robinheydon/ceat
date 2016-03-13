@@ -1,5 +1,7 @@
+<!DOCTYPE html>
 <html>
 	<head>
+		<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
 		<meta charset="utf-8">
 		<title>CEAT - Cycling Environment Assessment Tool</title>
 		<style>
@@ -11,27 +13,40 @@
 				margin-bottom: 4px;
 				background-color: #96d1f8;
 				border-radius: 8px;
-				height: 43px;
 				font-size: 14px;
 				border: 1px solid #96d1f8;
 			}
 			button.button2 {
 				width: 368px;
+				height: 43px;
 			}
 			button.button3 {
 				width: 244px;
+				height: 25px;
 			}
 			button.button4 {
 				width: 182px;
+				height: 25px;
+			}
+			button.button4t {
+				width: 182px;
+				height: 43px;
 			}
 			button.button5 {
 				width: 145px;
+				height: 25px;
+			}
+			button.button5t {
+				width: 145px;
+				height: 43px;
 			}
 			button.button6 {
 				width: 120px;
+				height: 43px;
 			}
 			button.button7 {
 				width: 102px;
+				height: 43px;
 			}
 			button:active {
 				background-color: #33c;
@@ -55,14 +70,14 @@
 var state_inf = 0;
 var state_msl = 0;
 var state_pcu = 0;
-var separation_score = -1;
+var separation_rating = -1;
 
 var state_bar = 0;
 var state_dir = 0;
 var state_sur = 0;
 var state_ped = 0;
 var state_wid = 0;
-var effectiveness_score = -1;
+var effectiveness_rating = -1;
 
 var overall_score = 0;
 
@@ -72,7 +87,7 @@ var overall_score = 0;
 
 // 1 == Traffic Free Path, 2 == None, 3 == ACL, 4 = MCL, 5 = Hybrid, 6 = Light, 7 = Full
 
-var separation_scores = {
+var separation_ratings = {
 	// ≤20 mph
 	1: {
 		1: [2, 2, 2],	// 1000 PCUs
@@ -99,14 +114,14 @@ var separation_scores = {
 	}
 };
 
-var score_labels = ['Very Low', 'Low', 'Medium', 'High', 'High+'];
+var rating_labels = ['Low-', 'Low', 'Medium', 'High', 'High+'];
 
 var overall_scores = {
 	0: [0, 0, 1, 1, 1],
 	1: [0, 1, 2, 2, 2],
-	2: [1, 2, 3, 3, 3],
-	3: [1, 2, 3, 4, 4],
-	4: [1, 2, 3, 4, 5]
+	2: [1, 2, 3, 3, 4],
+	3: [1, 2, 3, 4, 5],
+	4: [1, 2, 4, 5, 5]
 };
 
 var overall_descriptions = [
@@ -207,7 +222,7 @@ function analyse_failure (element)
 			var i4 = permutations[i][6]; // ped
 			var i5 = permutations[i][7]; // wid
 
-			score = calculate_overall_score (calculate_separation_score (r1, r2, r3), calculate_effectiveness_score (i1, i2, i3, i4, i5));
+			score = calculate_overall_score (calculate_separation_rating (r1, r2, r3), calculate_effectiveness_rating (i1, i2, i3, i4, i5));
 
 			if (score > best_score)
 			{
@@ -310,7 +325,7 @@ function update_overall_score ()
 {
 	var computable;
 
-	overall_score = calculate_overall_score (separation_score, effectiveness_score);
+	overall_score = calculate_overall_score (separation_rating, effectiveness_rating);
 
 	var score_element = document.getElementById ('overall_score');
 	var description_element = document.getElementById ('overall_description');
@@ -326,13 +341,13 @@ function update_overall_score ()
 
 //		detailed_element.innerHTML += "<br>";
 
-//		detailed_element.innerHTML += "sep:" + separation_score + ", eff:" + effectiveness_score;
+//		detailed_element.innerHTML += "sep:" + separation_rating + ", eff:" + effectiveness_rating;
 
 		analyse_failure (analysis_element);
 	}
 	else
 	{
-		score_element.innerHTML = '';
+		score_element.innerHTML = 'Score ';
 		description_element.innerHTML = '';
 //		detailed_element.innerHTML = '';
 		analysis_element.innerHTML = '';
@@ -343,7 +358,7 @@ function update_overall_score ()
 //////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////
 
-function calculate_separation_score (inf, msl, pcu)
+function calculate_separation_rating (inf, msl, pcu)
 {
 	var computable;
 
@@ -362,7 +377,7 @@ function calculate_separation_score (inf, msl, pcu)
 		}
 		else
 		{
-			var requirements = separation_scores[msl][pcu];
+			var requirements = separation_ratings[msl][pcu];
 
 			if (inf > requirements[2])
 			{
@@ -396,15 +411,15 @@ function calculate_separation_score (inf, msl, pcu)
 //////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////
 
-function update_separation_score ()
+function update_separation_rating ()
 {
-	separation_score = calculate_separation_score (state_inf, state_msl, state_pcu);
+	separation_rating = calculate_separation_rating (state_inf, state_msl, state_pcu);
 
-	var element = document.getElementById ('separation_score');
+	var element = document.getElementById ('separation_rating');
 
-	if (separation_score >= 0)
+	if (separation_rating >= 0)
 	{
-		element.innerHTML = score_labels[separation_score];
+		element.innerHTML = rating_labels[separation_rating];
 	}
 	else
 	{
@@ -418,7 +433,7 @@ function update_separation_score ()
 //////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////
 
-function calculate_effectiveness_score (bar, dir, sur, ped, wid)
+function calculate_effectiveness_rating (bar, dir, sur, ped, wid)
 {
 	var effective_bar;
 	var effective_width;
@@ -445,15 +460,15 @@ function calculate_effectiveness_score (bar, dir, sur, ped, wid)
 //////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////
 
-function update_effectiveness_score ()
+function update_effectiveness_rating ()
 {
-	effectiveness_score = calculate_effectiveness_score (state_bar, state_dir, state_sur, state_ped, state_wid);
+	effectiveness_rating = calculate_effectiveness_rating (state_bar, state_dir, state_sur, state_ped, state_wid);
 
-	var element = document.getElementById ('effectiveness_score');
+	var element = document.getElementById ('effectiveness_rating');
 
-	if (effectiveness_score >= 0)
+	if (effectiveness_rating >= 0)
 	{
-		element.innerHTML = score_labels[effectiveness_score];
+		element.innerHTML = rating_labels[effectiveness_rating];
 	}
 	else
 	{
@@ -519,56 +534,56 @@ function click_button (ev)
 			hide_tables ('infra', false);
 		}
 
-		update_separation_score ();
+		update_separation_rating ();
 	}
 
 	if (category == 'msl')
 	{
 		state_msl = Math.floor(num);
 
-		update_separation_score ();
+		update_separation_rating ();
 	}
 
 	if (category == 'pcu')
 	{
 		state_pcu = Math.floor(num);
 
-		update_separation_score ();
+		update_separation_rating ();
 	}
 
 	if (category == 'bar')
 	{
 		state_bar = Math.floor(num);
 
-		update_effectiveness_score ();
+		update_effectiveness_rating ();
 	}
 
 	if (category == 'sur')
 	{
 		state_sur = Math.floor(num);
 
-		update_effectiveness_score ();
+		update_effectiveness_rating ();
 	}
 
 	if (category == 'dir')
 	{
 		state_dir = Math.floor(num);
 
-		update_effectiveness_score ();
+		update_effectiveness_rating ();
 	}
 
 	if (category == 'ped')
 	{
 		state_ped = Math.floor(num);
 
-		update_effectiveness_score ();
+		update_effectiveness_rating ();
 	}
 
 	if (category == 'wid')
 	{
 		state_wid = Math.floor(num);
 
-		update_effectiveness_score ();
+		update_effectiveness_rating ();
 	}
 
 	update_buttons (category, num);
@@ -750,7 +765,11 @@ function body_onload ()
 	<img width="100%" src="CN_Logo_2015_1900x544.png">
 	<h1>Cycling Environment Assessment Tool</h1>
 	<table>
-		</tr><tr class="inf">
+		<tbody>
+		<tr id="separation" class="header" style="background-color: rgb(255, 255, 255);">
+		<td class="header" colspan="2"><hr>Separation from Motors: <span id="separation_rating"></span></td>
+		</tr>
+		<tr class="inf" style="background-color: rgb(255, 255, 255);">
 			<td class="left_element">Type of Cycling<br>Infrastructure</td>
 			<td>
 				<button class="button7" id="inf 1" title="Traffic free cycling path">Traffic Free Path</button>
@@ -762,7 +781,7 @@ function body_onload ()
 				<button class="button7" id="inf 7" title="Kerb segregation (or &gt;4m spatial separation)">High Protection</button>
 			</td>
 
-		<tr id="infra" class="msl">
+		</tr><tr id="infra" class="msl" style="background-color: rgb(255, 255, 255);">
 			<td class="left_element">Speed Limit</td>
 			<td>
 				<button class="button3" id="msl 1">20 mph or below</button>
@@ -770,17 +789,21 @@ function body_onload ()
 				<button class="button3" id="msl 3">40 mph or above</button>
 			</td>
 		
-		</tr><tr id="infra" class="pcu">
+		</tr><tr id="infra" class="pcu" style="background-color: rgb(255, 255, 255);">
 			<td class="left_element">Motor Vehicles<br>(PCUs/day)</td>
 			<td>
 				<button class="button5" id="pcu 1">less than 1,000</button>
 				<button class="button5" id="pcu 2">1,000 to 2,000</button>
 				<button class="button5" id="pcu 3">2,000 to 5,000</button>
 				<button class="button5" id="pcu 4">5,000 to 10,000</button>
-				<button class="button5" id="pcu 5">greater than 10,000</button>
+				<button class="button5" id="pcu 5">more than 10,000</button>
 			</td>
 
-		</tr><tr class="bar">
+		</tr>
+		<tr id="effective" class="header" style="background-color: rgb(255, 255, 255);">
+		<td class="header" colspan="2"><hr>Effectiveness: <span id="effectiveness_rating"></span></td>
+		</tr>
+		<tr class="bar" style="background-color: rgb(255, 255, 255);">
 			<td class="left_element">Barriers</td>
 			<td>
 				<button class="button5" id="bar 5">none or &gt;1.5m gap</button>
@@ -790,16 +813,16 @@ function body_onload ()
 				<button class="button5" id="bar 1">gate or &lt;0.6m gap</button>
 			</td>
 
-		</tr><tr class="dir">
+		</tr><tr class="dir" style="background-color: rgb(255, 255, 255);">
 			<td class="left_element">Directness</td>
 			<td>
-				<button class="button4" id="dir 4">within 10% of<br>most direct route</button>
-				<button class="button4" id="dir 3">within 25% of<br>most direct route</button>
-				<button class="button4" id="dir 2">within 40% of<br>most direct route</button>
-				<button class="button4" id="dir 1">over 40% longer than<br>most direct route</button>
+				<button class="button4t" id="dir 4">within 10% of<br>most direct route</button>
+				<button class="button4t" id="dir 3">within 25% of<br>most direct route</button>
+				<button class="button4t" id="dir 2">within 40% of<br>most direct route</button>
+				<button class="button4t" id="dir 1">over 40% longer than<br>most direct route</button>
 			</td>
 
-		</tr><tr class="sur">
+		</tr><tr class="sur" style="background-color: rgb(255, 255, 255);">
 			<td class="left_element">Surface</td>
 			<td>
 				<button class="button4" id="sur 4">very smooth</button>
@@ -808,7 +831,7 @@ function body_onload ()
 				<button class="button4" id="sur 1">unsealed</button>
 			</td>
 		
-		</tr><tr class="ped">
+		</tr><tr class="ped" style="background-color: rgb(255, 255, 255);">
 			<td class="left_element">Pedestrians</td>
 			<td>
 				<button class="button4" id="ped 4">none</button>
@@ -817,26 +840,28 @@ function body_onload ()
 				<button class="button4" id="ped 1">many</button>
 			</td>
 		
-		</tr><tr class="wid">
+		</tr><tr class="wid" style="background-color: rgb(255, 255, 255);">
 			<td class="left_element">Effective Width</td>
 			<td>
-				<button class="button5" id="wid 5">one-way ≥2.5m<br>two-way ≥4.0m</button>
-				<button class="button5" id="wid 4">one-way ≥2.1m<br>two-way ≥3.5m</button>
-				<button class="button5" id="wid 3">one-way ≥1.8m<br>two-way ≥3.0m</button>
-				<button class="button5" id="wid 2">one-way ≥1.5m<br>two-way ≥2.5m</button>
-				<button class="button5" id="wid 1">one-way &lt;1.5m<br>two-way &lt;2.5m<br></button>
+				<button class="button5t" id="wid 5">one-way ≥2.5m<br>two-way ≥4.0m</button>
+				<button class="button5t" id="wid 4">one-way ≥2.1m<br>two-way ≥3.5m</button>
+				<button class="button5t" id="wid 3">one-way ≥1.8m<br>two-way ≥3.0m</button>
+				<button class="button5t" id="wid 2">one-way ≥1.5m<br>two-way ≥2.5m</button>
+				<button class="button5t" id="wid 1">one-way &lt;1.5m<br>two-way &lt;2.5m<br></button>
 			</td>
-
-		</tr>
-	</table>	
+		</tr><tr id="footer" class="header" style="background-color: rgb(255, 255, 255);">
+		<td class="header" colspan="2"><hr>
+		<span style="font-size: 44px;" id="overall_score">Score </span>&nbsp;&nbsp;<span id="overall_description" style="font-size: 30px;"></span><p>
 	<hr>
-		<span style="font-size: 100px;" id="overall_score"></span><br><span id="overall_description" style="font-size: 50px;"></span><p>
-		<hr><p /> <p />
 		<span style="font-size: 25px;" id="analysis"></span>
+<!---
 	<hr>
-		Separation of Motors Score : <span id="separation_score"></span><br>
-		Effectiveness Score : <span id="effectiveness_score"></span>
+		Separation of Motors Score : <span id="separation_rating"></span><br>
+		Effectiveness Score : <span id="effectiveness_rating"></span>
 	<hr>
 		<span id="detailed_scores"></span>
-</body>
-</html>
+/-->
+		</td>
+		</tr>
+	</tbody></table>
+</body></html>
