@@ -228,7 +228,7 @@ function analyse_failure (element)
 			var i4 = permutations[i][6]; // ped
 			var i5 = permutations[i][7]; // wid
 
-			score = calculate_overall_score (calculate_separation_rating (r1, r2, r3), calculate_effectiveness_rating (i1, i2, i3, i4, i5))[0];
+			score = calculate_score (r1, r2, r3, i1, i2, i3, i4, i5)[0];
 
 			if (score > best_score)
 			{
@@ -328,7 +328,7 @@ function update_score ()
 	var effectiveness_element = document.getElementById ('effectiveness_rating');
 	var score_element = document.getElementById ('overall_score');
 	var description_element = document.getElementById ('overall_description');
-	var detailed_element = document.getElementById ('detailed_scores');
+//	var detailed_element = document.getElementById ('detailed_scores');
 	var analysis_element = document.getElementById ('analysis');
 
 	if (overall_score >= 0)
@@ -338,17 +338,17 @@ function update_score ()
 		score_element.innerHTML = 'Score ' + overall_score + '/5';
 		description_element.innerHTML = overall_descriptions[overall_score];
 
-		detailed_element.innerHTML = "inf:" + state_inf + ", msl:" + state_msl + ", pcu:" + state_pcu + ", bar:" + state_bar + ", dir:" + state_dir + ", sur:" + state_sur + ", ped:" + state_ped + ", wid:" + state_wid;
+//		detailed_element.innerHTML = "inf:" + state_inf + ", msl:" + state_msl + ", pcu:" + state_pcu + ", bar:" + state_bar + ", dir:" + state_dir + ", sur:" + state_sur + ", ped:" + state_ped + ", wid:" + state_wid;
+//
+//		detailed_element.innerHTML += "<br>";
+//
+//		detailed_element.innerHTML += "sep:" + separation_rating + ", eff:" + effectiveness_rating;
+//
+//		detailed_element.innerHTML += "<br>";
+//
+//		detailed_element.innerHTML += "sep:" + rating_labels[separation_rating] + ", eff:" + rating_labels[effectiveness_rating];
 
-		detailed_element.innerHTML += "<br>";
-
-		detailed_element.innerHTML += "sep:" + separation_rating + ", eff:" + effectiveness_rating;
-
-		detailed_element.innerHTML += "<br>";
-
-		detailed_element.innerHTML += "sep:" + rating_labels[separation_rating] + ", eff:" + rating_labels[effectiveness_rating];
-
-		// analyse_failure (analysis_element);
+		analyse_failure (analysis_element);
 	}
 	else
 	{
@@ -356,7 +356,7 @@ function update_score ()
 		effectiveness_element.innerHTML = '';
 		score_element.innerHTML = 'Score ';
 		description_element.innerHTML = '';
-		detailed_element.innerHTML = '';
+//		detailed_element.innerHTML = '';
 		analysis_element.innerHTML = '';
 	}
 }
@@ -371,12 +371,12 @@ function calculate_score (inf, msl, pcu, bar, dir, sur, ped, wid)
 	var eff;
 	var score;
 
-	if ((inf != 1) && ((msl == 0) || (pcu == 0)))
+	if ((inf >= 2) && (inf <= 6) && ((msl == 0) || (pcu == 0)))
 	{
 		return [-1, -1, -1];
 	}
 
-	if (inf == 1)
+	if ((inf == 1) || (inf == 7)) // doesn't matter with the speed or pcus is
 	{
 		sep = 4; // High +
 	}
@@ -404,6 +404,18 @@ function calculate_score (inf, msl, pcu, bar, dir, sur, ped, wid)
 		{
 			sep = 0; // Low-
 		}
+	}
+
+	if (inf == 2) // if road without infrastructure - don't care about barriers, pedestrians, or width
+	{
+		bar = 5;
+		ped = 5;
+		wid = 5;
+	}
+	if (inf >= 3) // if road with infrastructure - don't care about barriers or pedetrians
+	{
+		bar = 5;
+		ped = 5;
 	}
 
 	if ((bar == 0) || (dir == 0) || (sur == 0) || (ped == 0) || (wid == 0))
@@ -464,6 +476,9 @@ function hide_tables (name, on)
 
 				update_buttons ('msl', state_msl);
 				update_buttons ('pcu', state_pcu);
+				update_buttons ('bar', state_bar);
+				update_buttons ('ped', state_ped);
+				update_buttons ('wid', state_wid);
 			}
 			else
 			{
@@ -471,6 +486,9 @@ function hide_tables (name, on)
 
 				update_buttons ('msl', state_msl);
 				update_buttons ('pcu', state_pcu);
+				update_buttons ('bar', state_bar);
+				update_buttons ('ped', state_ped);
+				update_buttons ('wid', state_wid);
 			}
 		}
 	}
@@ -494,10 +512,12 @@ function click_button (ev)
 		if (state_inf == 1)
 		{
 			hide_tables ('infra', true);
+			hide_tables ('road', false);
 		}
 		else
 		{
 			hide_tables ('infra', false);
+			hide_tables ('road', true);
 		}
 
 		update_score ();
@@ -570,7 +590,13 @@ function update_buttons (category, num)
 		var bcn = buttons[i].id.split(" ");
 		if (bcn[0] == category)
 		{
-			if (((state_inf == 1) && (category == 'msl')) || ((state_inf == 1) && (category == 'pcu')))
+			if (((state_inf == 1) && (category == 'msl')) ||
+				((state_inf == 1) && (category == 'pcu')) ||
+				((state_inf != 1) && (category == 'bar')) ||
+				((state_inf != 1) && (category == 'ped')) ||
+				((state_inf == 2) && (category == 'wid')) ||
+				((state_inf == 7) && (category == 'msl')) ||
+				((state_inf == 7) && (category == 'pcu')))
 			{
 				buttons[i].style.backgroundColor = '#fff';
 				buttons[i].style.color = '#ddd';
@@ -769,7 +795,7 @@ function body_onload ()
 		<tr id="effective" class="header" style="background-color: rgb(255, 255, 255);">
 		<td class="header" colspan="2"><hr>Effectiveness: <span id="effectiveness_rating"></span></td>
 		</tr>
-		<tr class="bar" style="background-color: rgb(255, 255, 255);">
+		<tr id="road" class="bar" style="background-color: rgb(255, 255, 255);">
 			<td class="left_element">Barriers</td>
 			<td>
 				<button class="button5" id="bar 5">none or &gt;1.5m gap</button>
@@ -797,7 +823,7 @@ function body_onload ()
 				<button class="button4" id="sur 1">unsealed</button>
 			</td>
 		
-		</tr><tr class="ped" style="background-color: rgb(255, 255, 255);">
+		</tr><tr id="road" class="ped" style="background-color: rgb(255, 255, 255);">
 			<td class="left_element">Pedestrians</td>
 			<td>
 				<button class="button4" id="ped 4">none</button>
@@ -823,10 +849,9 @@ function body_onload ()
 <!--	<hr>
 		Separation of Motors Score : <span id="separation_rating"></span><br>
 		Effectiveness Score : <span id="effectiveness_rating"></span>
--->
 	<hr>
 		<span id="detailed_scores"></span>
-		</td>
+-->		</td>
 		</tr>
 	</tbody></table>
 </body></html>
