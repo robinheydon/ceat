@@ -114,14 +114,20 @@ var separation_ratings = {
 	}
 };
 
-var rating_labels = ['Low-', 'Low', 'Medium', 'High', 'High+'];
+var rating_labels = [
+		'Complete failure: Low-',
+		'Unacceptable: Low',
+		'Very poor: Medium',
+		'Good practice: High',
+		'World class: High+'
+	];
 
 var overall_scores = {
-	0: [0, 0, 1, 1, 1],
+	0: [0, 0, 0, 0, 0],
 	1: [0, 1, 2, 2, 2],
-	2: [1, 2, 3, 3, 4],
-	3: [1, 2, 3, 4, 5],
-	4: [1, 2, 4, 5, 5]
+	2: [0, 2, 3, 3, 3],
+	3: [0, 2, 3, 4, 4],
+	4: [0, 2, 3, 4, 5]
 };
 
 var overall_descriptions = [
@@ -222,7 +228,7 @@ function analyse_failure (element)
 			var i4 = permutations[i][6]; // ped
 			var i5 = permutations[i][7]; // wid
 
-			score = calculate_overall_score (calculate_separation_rating (r1, r2, r3), calculate_effectiveness_rating (i1, i2, i3, i4, i5));
+			score = calculate_overall_score (calculate_separation_rating (r1, r2, r3), calculate_effectiveness_rating (i1, i2, i3, i4, i5))[0];
 
 			if (score > best_score)
 			{
@@ -307,49 +313,50 @@ function analyse_failure (element)
 //////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////
 
-function calculate_overall_score (sep, eff)
+function update_score ()
 {
-	if ((sep == -1) || (eff == -1))
-	{
-		return -1;
-	}
+	var scores = calculate_score (
+			state_inf, state_msl, state_pcu,
+			state_bar, state_dir, state_sur, state_ped, state_wid
+		);
 
-	return overall_scores[sep][eff];
-}
+	overall_score = scores[0];
+	separation_rating = scores[1];
+	effectiveness_rating = scores[2];
 
-//////////////////////////////////////////////////////////////////////////////
-//////////////////////////////////////////////////////////////////////////////
-//////////////////////////////////////////////////////////////////////////////
-
-function update_overall_score ()
-{
-	var computable;
-
-	overall_score = calculate_overall_score (separation_rating, effectiveness_rating);
-
+	var separation_element = document.getElementById ('separation_rating');
+	var effectiveness_element = document.getElementById ('effectiveness_rating');
 	var score_element = document.getElementById ('overall_score');
 	var description_element = document.getElementById ('overall_description');
-//	var detailed_element = document.getElementById ('detailed_scores');
+	var detailed_element = document.getElementById ('detailed_scores');
 	var analysis_element = document.getElementById ('analysis');
 
 	if (overall_score >= 0)
 	{
+		separation_element.innerHTML = rating_labels[separation_rating];
+		effectiveness_element.innerHTML = rating_labels[effectiveness_rating];
 		score_element.innerHTML = 'Score ' + overall_score + '/5';
 		description_element.innerHTML = overall_descriptions[overall_score];
 
-//		detailed_element.innerHTML = "oof:" + oof + ", msl:" + msl + ", pcu:" + pcu + ", seg:" + seg + ", bar:" + bar + ", gap:" + gap + ", way:" + way + ", one:" + one + ", two:" + two + ", dir:" + dir + ", sur:" + sur;
+		detailed_element.innerHTML = "inf:" + state_inf + ", msl:" + state_msl + ", pcu:" + state_pcu + ", bar:" + state_bar + ", dir:" + state_dir + ", sur:" + state_sur + ", ped:" + state_ped + ", wid:" + state_wid;
 
-//		detailed_element.innerHTML += "<br>";
+		detailed_element.innerHTML += "<br>";
 
-//		detailed_element.innerHTML += "sep:" + separation_rating + ", eff:" + effectiveness_rating;
+		detailed_element.innerHTML += "sep:" + separation_rating + ", eff:" + effectiveness_rating;
 
-		analyse_failure (analysis_element);
+		detailed_element.innerHTML += "<br>";
+
+		detailed_element.innerHTML += "sep:" + rating_labels[separation_rating] + ", eff:" + rating_labels[effectiveness_rating];
+
+		// analyse_failure (analysis_element);
 	}
 	else
 	{
+		separation_element.innerHTML = '';
+		effectiveness_element.innerHTML = '';
 		score_element.innerHTML = 'Score ';
 		description_element.innerHTML = '';
-//		detailed_element.innerHTML = '';
+		detailed_element.innerHTML = '';
 		analysis_element.innerHTML = '';
 	}
 }
@@ -358,124 +365,83 @@ function update_overall_score ()
 //////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////
 
-function calculate_separation_rating (inf, msl, pcu)
+function calculate_score (inf, msl, pcu, bar, dir, sur, ped, wid)
 {
-	var computable;
-
-	computable = true;
+	var sep;
+	var eff;
+	var score;
 
 	if ((inf != 1) && ((msl == 0) || (pcu == 0)))
 	{
-		computable = false;
+		return [-1, -1, -1];
 	}
 
-	if (computable)
+	if (inf == 1)
 	{
-		if (inf == 1)
+		sep = 4; // High +
+	}
+	else
+	{
+		var requirements = separation_ratings[msl][pcu];
+
+		if (inf > requirements[2])
 		{
-			return 4;
+			sep = 4; // High +
+		}
+		else if (inf == requirements[2])
+		{
+			sep = 3; // High
+		}
+		else if (inf >= requirements[1])
+		{
+			sep = 2; // Medium
+		}
+		else if (inf >= requirements[0])
+		{
+			sep = 1; // Low
 		}
 		else
 		{
-			var requirements = separation_ratings[msl][pcu];
-
-			if (inf > requirements[2])
-			{
-				return 4;
-			}
-			else if (inf == requirements[2])
-			{
-				return 3;
-			}
-			else if (inf >= requirements[1])
-			{
-				return 2;
-			}
-			else if (inf >= requirements[0])
-			{
-				return 1;
-			}
-			else
-			{
-				return 0;
-			}
+			sep = 0; // Low-
 		}
 	}
-	else
-	{
-		return -1;
-	}
-}
-
-//////////////////////////////////////////////////////////////////////////////
-//////////////////////////////////////////////////////////////////////////////
-//////////////////////////////////////////////////////////////////////////////
-
-function update_separation_rating ()
-{
-	separation_rating = calculate_separation_rating (state_inf, state_msl, state_pcu);
-
-	var element = document.getElementById ('separation_rating');
-
-	if (separation_rating >= 0)
-	{
-		element.innerHTML = rating_labels[separation_rating];
-	}
-	else
-	{
-		element.innerHTML = '';
-	}
-
-	update_overall_score ();
-}
-
-//////////////////////////////////////////////////////////////////////////////
-//////////////////////////////////////////////////////////////////////////////
-//////////////////////////////////////////////////////////////////////////////
-
-function calculate_effectiveness_rating (bar, dir, sur, ped, wid)
-{
-	var effective_bar;
-	var effective_width;
-	var computable;
-
-	computable = true;
 
 	if ((bar == 0) || (dir == 0) || (sur == 0) || (ped == 0) || (wid == 0))
 	{
-		computable = false;
+		return [-1, -1, -1];
 	}
 
-	if (computable)
+	eff = Math.min (bar - 1, dir, sur, ped, wid - 1);
+
+	score = overall_scores[sep][eff];
+
+	if ((eff == 0) && (sep >= 2)) // check for an upgrade based on some effectiveness
 	{
-		return Math.min (bar - 1, dir, sur, ped, wid - 1);
+		var goodness = 0;
+
+		console.log ("Possible score == 1, due to sep");
+
+		if (bar - 1 >= 2) { goodness += 1; }
+		if (dir >= 2) { goodness += 1; }
+		if (sur >= 2) { goodness += 1; }
+		if (ped >= 2) { goodness += 1; }
+		if (wid - 1 >= 2) { goodness += 1; }
+
+		console.log ("goodness = " + goodness);
+
+		// upgrade score to 1/5 if only one thing is not good
+		if (goodness >= 4)
+		{
+			score = 1;
+		}
 	}
-	else
+	
+	if ((sep == 0) && (eff >= 2))
 	{
-		return -1;
-	}
-}
-
-//////////////////////////////////////////////////////////////////////////////
-//////////////////////////////////////////////////////////////////////////////
-//////////////////////////////////////////////////////////////////////////////
-
-function update_effectiveness_rating ()
-{
-	effectiveness_rating = calculate_effectiveness_rating (state_bar, state_dir, state_sur, state_ped, state_wid);
-
-	var element = document.getElementById ('effectiveness_rating');
-
-	if (effectiveness_rating >= 0)
-	{
-		element.innerHTML = rating_labels[effectiveness_rating];
-	}
-	else
-	{
-		element.innerHTML = '';
+		console.log ("Possible score == 1, due to eff");
 	}
 
-	update_overall_score ();
+	return [score, sep, eff];
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -534,56 +500,56 @@ function click_button (ev)
 			hide_tables ('infra', false);
 		}
 
-		update_separation_rating ();
+		update_score ();
 	}
 
 	if (category == 'msl')
 	{
 		state_msl = Math.floor(num);
 
-		update_separation_rating ();
+		update_score ();
 	}
 
 	if (category == 'pcu')
 	{
 		state_pcu = Math.floor(num);
 
-		update_separation_rating ();
+		update_score ();
 	}
 
 	if (category == 'bar')
 	{
 		state_bar = Math.floor(num);
 
-		update_effectiveness_rating ();
+		update_score ();
 	}
 
 	if (category == 'sur')
 	{
 		state_sur = Math.floor(num);
 
-		update_effectiveness_rating ();
+		update_score ();
 	}
 
 	if (category == 'dir')
 	{
 		state_dir = Math.floor(num);
 
-		update_effectiveness_rating ();
+		update_score ();
 	}
 
 	if (category == 'ped')
 	{
 		state_ped = Math.floor(num);
 
-		update_effectiveness_rating ();
+		update_score ();
 	}
 
 	if (category == 'wid')
 	{
 		state_wid = Math.floor(num);
 
-		update_effectiveness_rating ();
+		update_score ();
 	}
 
 	update_buttons (category, num);
@@ -854,13 +820,12 @@ function body_onload ()
 		<span style="font-size: 44px;" id="overall_score">Score </span>&nbsp;&nbsp;<span id="overall_description" style="font-size: 30px;"></span><p>
 	<hr>
 		<span style="font-size: 25px;" id="analysis"></span>
-<!---
-	<hr>
+<!--	<hr>
 		Separation of Motors Score : <span id="separation_rating"></span><br>
 		Effectiveness Score : <span id="effectiveness_rating"></span>
+-->
 	<hr>
 		<span id="detailed_scores"></span>
-/-->
 		</td>
 		</tr>
 	</tbody></table>
