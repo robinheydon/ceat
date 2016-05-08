@@ -1,3 +1,11 @@
-(Simple) Cycle Environment Assessment Tool
+Cycling Environment Assessment Tool
 
-The simple cycle environment assessment tool is a single file webpage that allows anybody to quickly evaluate the quality of a given bit of bicycle infrastructure by clicking on a few buttons and then obtaining a score. It also analyses the current situation and makes suggestions of ways to improve it to make it better.
+This single file webpage allows anybody to quickly evaluate the quality of a linear section of cycling infrastructure (ie a link) by clicking on a few buttons to obtain a score. It also suggests improvements that would increase the score.
+
+A complimentary system to evaluate junctions will be developed soon, followed by systems to combine link and junction scores into a route score.
+
+Live: http://ceat.cyclenation.org.uk/
+
+Future: http://ceat.cyclenation.org.uk/next/
+
+Development: http://www.robinheydon.net/ceat/
