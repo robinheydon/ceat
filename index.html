@@ -1,6 +1,7 @@
- <!DOCTYPE html>
-<html><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
-		
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
 		<meta charset="utf-8">
 		<title>CEAT - Cycling Environment Assessment Tool</title>
 		<style>
@@ -17,7 +18,7 @@
 			}
 			button.button2 {
 				width: 368px;
-				height: 25px;
+				height: 43px;
 			}
 			button.button3 {
 				width: 244px;
@@ -53,8 +54,8 @@
 			}
 			td.left_element {
 				text-align: right;
-				padding-right: 10px;
-				width: 142px;
+				padding-right: 20px;
+				width: 15%;
 			}
 			tr.auto_hide {
 				display: none;
@@ -71,6 +72,7 @@ var state_msl = 0;
 var state_pcu = 0;
 var separation_rating = -1;
 
+var state_seg = 0;
 var state_bar = 0;
 var state_dir = 0;
 var state_sur = 0;
@@ -93,12 +95,12 @@ var separation_ratings = {
 		2: [2, 2, 3],	// 2000 PCUs
 		3: [3, 4, 5],	// 5000 PCUs
 		4: [4, 5, 6],	// 10000 PCUs
-		5: [4, 6, 6]	// any PCUs
+		5: [4, 5, 7]	// any PCUs
 	},
 	// 30 mph
 	2: {
-		1: [2, 2, 3],	// 1000 PCUs
-		2: [2, 2, 4],	// 2000 PCUs
+		1: [2, 3, 4],	// 1000 PCUs
+		2: [3, 4, 5],	// 2000 PCUs
 		3: [3, 5, 6],	// 5000 PCUs
 		4: [4, 5, 7],	// 10000 PCUs
 		5: [4, 6, 7]	// any PCUs
@@ -106,21 +108,27 @@ var separation_ratings = {
 	// ≥40 mpg
 	3: {
 		1: [2, 3, 4],	// 1000 PCUs
-		2: [2, 4, 6],	// 2000 PCUs
+		2: [3, 4, 6],	// 2000 PCUs
 		3: [3, 5, 6],	// 5000 PCUs
 		4: [4, 5, 7],	// 10000 PCUs
 		5: [5, 6, 7]	// any PCUs
 	}
 };
 
-var rating_labels = ['Low-', 'Low', 'Medium', 'High', 'High+'];
+var rating_labels = [
+		'Complete failure: Low-',
+		'Unacceptable: Low',
+		'Very poor: Medium',
+		'Good practice: High',
+		'World class: High+'
+	];
 
 var overall_scores = {
-	0: [0, 0, 0, 0, 0],
+	0: [0, 0, 1, 1, 1],
 	1: [0, 1, 2, 2, 2],
-	2: [0, 2, 3, 3, 3],
-	3: [0, 2, 3, 4, 4],
-	4: [0, 2, 3, 4, 5]
+	2: [1, 2, 3, 3, 3],
+	3: [1, 2, 3, 4, 4],
+	4: [1, 2, 3, 4, 5]
 };
 
 var overall_descriptions = [
@@ -164,22 +172,22 @@ function analyse_failure (element)
 		{
 			for (var i1 = state_bar; i1 <= 5; i1 ++)
 			{
-				for (var i2 = state_dir; i2 <= 4; i2 ++)
+				for (var i2 = state_dir; i2 <= 5; i2 ++)
 				{
-					for (var i3 = state_sur; i3 <= 4; i3 ++)
+					for (var i3 = state_sur; i3 <= 5; i3 ++)
 					{
-						for (var i4 = state_ped; i4 <= 4; i4 ++)
+						for (var i4 = state_ped; i4 <= 5; i4 ++)
 						{
 							for (var i5 = state_wid; i5 <= 5; i5 ++)
 							{
-								permutations.push ([state_inf, state_msl, state_pcu,i1, i2, i3, i4, i5]);
+								permutations.push ([state_inf, state_msl, state_pcu, i1, i2, i3, i4, i5]);
 							}
 						}
 					}
 				}
 			}
 		}
-		else // (state_seg > 1) // on-road
+		else // (state_inf > 1) // on-road
 		{
 			for (var r1 = state_inf; r1 <= 7; r1 ++)
 			{
@@ -189,11 +197,11 @@ function analyse_failure (element)
 					{
 						for (var i1 = state_bar; i1 <= 5; i1 ++)
 						{
-							for (var i2 = state_dir; i2 <= 4; i2 ++)
+							for (var i2 = state_dir; i2 <= 5; i2 ++)
 							{
-								for (var i3 = state_sur; i3 <= 4; i3 ++)
+								for (var i3 = state_sur; i3 <= 5; i3 ++)
 								{
-									for (var i4 = state_ped; i4 <= 4; i4 ++)
+									for (var i4 = state_ped; i4 <= 5; i4 ++)
 									{
 										for (var i5 = state_wid; i5 <= 5; i5 ++)
 										{
@@ -221,7 +229,7 @@ function analyse_failure (element)
 			var i4 = permutations[i][6]; // ped
 			var i5 = permutations[i][7]; // wid
 
-			score = calculate_overall_score (calculate_separation_rating (r1, r2, r3), calculate_effectiveness_rating (i1, i2, i3, i4, i5));
+			score = calculate_score (r1, r2, r3, i1, i2, i3, i4, i5)[0];
 
 			if (score > best_score)
 			{
@@ -252,7 +260,7 @@ function analyse_failure (element)
 					and = ', and </li><li>';
 				}
 
-				if (i2 != state_dir)
+				if (i2 != state_sur)
 				{
 					text += and + 'improve directness';
 					and = ', and </li><li>';
@@ -266,7 +274,7 @@ function analyse_failure (element)
 
 				if (i4 != state_ped)
 				{
-					text += and + 'reduce pedestrian volumes';
+					text += and + 'reduce conflicts with pedestrians';
 					and = ', and </li><li>';
 				}
 
@@ -291,10 +299,10 @@ function analyse_failure (element)
 	{
 		if (suggestions[i].length)
 		{
-			html += 'To increase score to ' + i + '/5:<br>';
+			html += 'To obtain score of ' + i + '/5:<br>';
 			for (var j = 0; j < suggestions[i].length; j ++)
 			{
-				html += suggestions[i][j] + '<br>';
+				html += suggestions[i][j] + '<br><br>';
 			}
 		}
 	}
@@ -306,49 +314,58 @@ function analyse_failure (element)
 //////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////
 
-function calculate_overall_score (sep, eff)
+function update_score ()
 {
-	if ((sep == -1) || (eff == -1))
-	{
-		return -1;
-	}
+	var scores = calculate_score (
+			state_inf, state_msl, state_pcu,
+			state_bar, state_dir, state_sur, state_ped, state_wid
+		);
 
-	return overall_scores[sep][eff];
-}
+	overall_score = scores[0];
+	separation_rating = scores[1];
+	effectiveness_rating = scores[2];
 
-//////////////////////////////////////////////////////////////////////////////
-//////////////////////////////////////////////////////////////////////////////
-//////////////////////////////////////////////////////////////////////////////
-
-function update_overall_score ()
-{
-	var computable;
-
-	overall_score = calculate_overall_score (separation_rating, effectiveness_rating);
-
+	var separation_element = document.getElementById ('separation_rating');
+	var effectiveness_element = document.getElementById ('effectiveness_rating');
 	var score_element = document.getElementById ('overall_score');
 	var description_element = document.getElementById ('overall_description');
-//	var detailed_element = document.getElementById ('detailed_scores');
+	var detailed_element = document.getElementById ('detailed_scores');
 	var analysis_element = document.getElementById ('analysis');
 
 	if (overall_score >= 0)
 	{
-		score_element.innerHTML = '&nbsp;Score: ' + overall_score + '/5';
+		separation_element.innerHTML = rating_labels[separation_rating];
+		effectiveness_element.innerHTML = rating_labels[effectiveness_rating];
+		score_element.innerHTML = 'Score ' + overall_score + '/5';
 		description_element.innerHTML = overall_descriptions[overall_score];
 
-//		detailed_element.innerHTML = "oof:" + oof + ", msl:" + msl + ", pcu:" + pcu + ", seg:" + seg + ", bar:" + bar + ", gap:" + gap + ", way:" + way + ", one:" + one + ", two:" + two + ", dir:" + dir + ", sur:" + sur;
+		if (detailed_element)
+		{
+			detailed_element.innerHTML = "inf:" + state_inf + ", msl:" + state_msl + ", pcu:" + state_pcu + ", bar:" + state_bar + ", dir:" + state_dir + ", sur:" + state_sur + ", ped:" + state_ped + ", wid:" + state_wid;
 
-//		detailed_element.innerHTML += "<br>";
+			detailed_element.innerHTML += "<br>";
 
-//		detailed_element.innerHTML += "sep:" + separation_rating + ", eff:" + effectiveness_rating;
+			detailed_element.innerHTML += "sep:" + separation_rating + ", eff:" + effectiveness_rating;
+
+			detailed_element.innerHTML += "<br>";
+
+			detailed_element.innerHTML += "sep:" + rating_labels[separation_rating] + ", eff:" + rating_labels[effectiveness_rating];
+		}
 
 		analyse_failure (analysis_element);
 	}
 	else
 	{
-		score_element.innerHTML = '&nbsp;Score: ';
+		separation_element.innerHTML = '';
+		effectiveness_element.innerHTML = '';
+		score_element.innerHTML = 'Score ';
 		description_element.innerHTML = '';
-//		detailed_element.innerHTML = '';
+
+		if (detailed_element)
+		{
+			detailed_element.innerHTML = '';
+		}
+		
 		analysis_element.innerHTML = '';
 	}
 }
@@ -357,131 +374,117 @@ function update_overall_score ()
 //////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////
 
-function calculate_separation_rating (inf, msl, pcu)
+function calculate_score (inf, msl, pcu, bar, dir, sur, ped, wid)
 {
-	var computable;
+	var sep;
+	var eff;
+	var score;
 
-	computable = true;
+	// console.log ("calculate_score : " + inf + "," + msl + "," + pcu + "," + bar + "," + dir + "," + sur + "," + ped + "," + wid)
 
-	if ((inf != 1) && ((msl == 0) || (pcu == 0)))
+	if (inf == 0)
 	{
-		computable = false;
+		// console.log ("score : " + -1 + "," + -1 + "," + -1 + " inf zero")
+		return [-1, -1, -1];
 	}
 
-	if (computable)
+	if ((inf >= 2) && (inf <= 6) && ((msl == 0) || (pcu == 0)))
 	{
-		if (inf == 1)
+		// console.log ("score : " + -1 + "," + -1 + "," + -1 + " msl,pcu zero")
+		return [-1, -1, -1];
+	}
+
+	if ((inf == 1) || (inf == 7)) // doesn't matter with the speed or pcus is
+	{
+		sep = 4; // High +
+	}
+	else
+	{
+		var requirements = separation_ratings[msl][pcu];
+
+		if (inf > requirements[2])
 		{
-			return 4;
+			sep = 4; // High +
+		}
+		else if (inf == requirements[2])
+		{
+			sep = 3; // High
+		}
+		else if (inf >= requirements[1])
+		{
+			sep = 2; // Medium
+		}
+		else if (inf >= requirements[0])
+		{
+			sep = 1; // Low
 		}
 		else
 		{
-			var requirements = separation_ratings[msl][pcu];
-
-			if (inf > requirements[2] | inf == 7)
-			{
-				return 4;
-			}
-			else if (inf == requirements[2])
-			{
-				return 3;
-			}
-			else if (inf >= requirements[1])
-			{
-				return 2;
-			}
-			else if (inf >= requirements[0])
-			{
-				return 1;
-			}
-			else
-			{
-				return 0;
-			}
+			sep = 0; // Low-
 		}
 	}
-	else
+
+	if (inf == 1) // if traffic free path
 	{
-		return -1;
-	}
-}
-
-//////////////////////////////////////////////////////////////////////////////
-//////////////////////////////////////////////////////////////////////////////
-//////////////////////////////////////////////////////////////////////////////
-
-function update_separation_rating ()
-{
-	separation_rating = calculate_separation_rating (state_inf, state_msl, state_pcu);
-
-	var element = document.getElementById ('separation_rating');
-
-	if (separation_rating >= 0)
-	{
-		element.innerHTML = rating_labels[separation_rating];
-	}
-	else
-	{
-		element.innerHTML = '';
+		if ((state_seg == 1) || (state_seg == 2))
+		{
+			ped = 5
+		}
 	}
 
-	update_overall_score ();
-}
+	if (inf == 2) // if road without infrastructure - don't care about barriers, pedestrians, or width
+	{
+		bar = 5;
+		ped = 5;
+		wid = 5;
+	}
 
-//////////////////////////////////////////////////////////////////////////////
-//////////////////////////////////////////////////////////////////////////////
-//////////////////////////////////////////////////////////////////////////////
-
-function calculate_effectiveness_rating (bar, dir, sur, ped, wid)
-{
-	var effective_bar;
-	var effective_width;
-	var computable;
-
-	computable = true;
+	if (inf >= 3) // if road with infrastructure - don't care about barriers or pedetrians
+	{
+		bar = 5;
+		ped = 5;
+	}
 
 	if ((bar == 0) || (dir == 0) || (sur == 0) || (ped == 0) || (wid == 0))
 	{
-		computable = false;
+		// console.log ("score : " + -1 + "," + -1 + "," + -1 + " allzeros")
+		return [-1, -1, -1];
 	}
 
-	if (computable)
+	eff = Math.min (bar, dir, sur, ped, wid) - 1;
+
+	score = overall_scores[sep][eff];
+
+	if (score == 1) // check for a downgrade if really bad
 	{
-		return Math.min (bar - 1, dir, sur, ped, wid - 1);
+		var badness = 0;
+
+		if (bar <= 2) { badness += 1; }
+		if (dir <= 2) { badness += 1; }
+		if (sur <= 2) { badness += 1; }
+		if (ped <= 2) { badness += 1; }
+		if (wid <= 2) { badness += 1; }
+
+		// console.log ("badness = " + badness);
+
+		// upgrade score to 1/5 if only one thing is not good
+		if (badness >= 2)
+		{
+			// console.log ("Score changed to 0");
+			score = 0;
+		}
 	}
-	else
-	{
-		return -1;
-	}
+	
+	// console.log ("score : " + score + "," + sep + "," + eff)
+
+	return [score, sep, eff];
 }
 
 //////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////
 
-function update_effectiveness_rating ()
-{
-	effectiveness_rating = calculate_effectiveness_rating (state_bar, state_dir, state_sur, state_ped, state_wid);
-
-	var element = document.getElementById ('effectiveness_rating');
-
-	if (effectiveness_rating >= 0)
-	{
-		element.innerHTML = rating_labels[effectiveness_rating];
-	}
-	else
-	{
-		element.innerHTML = '';
-	}
-
-	update_overall_score ();
-}
-
-//////////////////////////////////////////////////////////////////////////////
-//////////////////////////////////////////////////////////////////////////////
-//////////////////////////////////////////////////////////////////////////////
-
-function hide_row (name, on)
+function hide_tables (name, on)
 {
 	var table_rows = document.getElementsByTagName ("tr");
 
@@ -495,17 +498,106 @@ function hide_row (name, on)
 			{
 				tr.style.color = '#ddd';
 
+				update_buttons ('seg', state_seg);
 				update_buttons ('msl', state_msl);
 				update_buttons ('pcu', state_pcu);
+				update_buttons ('bar', state_bar);
+				update_buttons ('ped', state_ped);
+				update_buttons ('wid', state_wid);
 			}
 			else
 			{
 				tr.style.color = '#000';
 
+				update_buttons ('seg', state_seg);
 				update_buttons ('msl', state_msl);
 				update_buttons ('pcu', state_pcu);
+				update_buttons ('bar', state_bar);
+				update_buttons ('ped', state_ped);
+				update_buttons ('wid', state_wid);
 			}
 		}
+	}
+}
+
+//////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////
+
+function update_widths ()
+{
+	// 1 = 1w-on-road
+	// 2 = 1w-cycle-way
+	// 3 = 2w-segregated
+	// 4 = 2w-shared
+
+	var width_type;
+
+	if (state_inf == 1)
+	{
+		if (state_seg >= 1)
+		{
+			width_type = state_seg + 1;
+		}
+		else
+		{
+			width_type = 0;
+		}
+	}
+	else if ((state_inf == 3) || (state_inf == 4)) // on-road cycle lanes
+	{
+		width_type = 1;
+	}
+	else if ((state_inf == 5) || (state_inf == 6) || (state_inf == 7)) // cycleways
+	{
+		width_type = 2;
+	}
+
+	var but1 = document.getElementById ('wid 1');
+	var but2 = document.getElementById ('wid 2');
+	var but3 = document.getElementById ('wid 3');
+	var but4 = document.getElementById ('wid 4');
+	var but5 = document.getElementById ('wid 5');
+
+	if (width_type == 0)
+	{
+		but5.innerHTML = "Future-proof";
+		but4.innerHTML = "Efficient";
+		but3.innerHTML = "Compromised";
+		but2.innerHTML = "Minimum";
+		but1.innerHTML = "Sub-standard";
+	}
+	else if (width_type == 1)
+	{
+		but5.innerHTML = "Future-proof<br>≥2.1m";
+		but4.innerHTML = "Efficient<br>1.8m to 2.0m";
+		but3.innerHTML = "Compromised<br>1.6m to 1.7m";
+		but2.innerHTML = "Minimum<br>1.5m";
+		but1.innerHTML = "Sub-standard<br>less than 1.5m";
+	}
+	else if (width_type == 2)
+	{
+		but5.innerHTML = "Future-proof<br>≥2.5m";
+		but4.innerHTML = "Efficient<br>2.1m to 2.4m";
+		but3.innerHTML = "Compromised<br>1.8m to 2.0m";
+		but2.innerHTML = "Minimum<br>1.5 to 1.7m";
+		but1.innerHTML = "Sub-standard<br>less than 1.5m";
+	}
+	else if (width_type == 3)
+	{
+		but5.innerHTML = "Future-proof<br>≥4.0m";
+		but4.innerHTML = "Efficient<br>3.5m to 3.9m";
+		but3.innerHTML = "Compromised<br>3.0m to 3.4m";
+		but2.innerHTML = "Minimum<br>2.5 to 2.9m";
+		but1.innerHTML = "Sub-standard<br>less than 2.5m";
+	}
+	else if (width_type == 4)
+	{
+		but5.innerHTML = "Future-proof<br>≥4.0m";
+		but4.innerHTML = "Efficient<br>3.5m to 3.9m";
+		but3.innerHTML = "Compromised<br>2.6m to 3.4m";
+		but2.innerHTML = "Minimum<br>2.1 to 2.5m";
+		but1.innerHTML = "Sub-standard<br>less than 2.0m";
 	}
 }
 
@@ -526,68 +618,88 @@ function click_button (ev)
 
 		if (state_inf == 1)
 		{
-			hide_row ('infra', true);
+			hide_tables ('infra', true);
+			hide_tables ('road', false);
+			hide_tables ('widths', false);
+		}
+		else if (state_inf == 2)
+		{
+			hide_tables ('infra', false);
+			hide_tables ('road', true);
+			hide_tables ('widths', true);
 		}
 		else
 		{
-			hide_row ('infra', false);
+			hide_tables ('infra', false);
+			hide_tables ('road', true);
+			hide_tables ('widths', false);
 		}
 
-		update_separation_rating ();
+		update_widths ();
+
+		update_score ();
 	}
 
 	if (category == 'msl')
 	{
 		state_msl = Math.floor(num);
 
-		update_separation_rating ();
+		update_score ();
 	}
 
 	if (category == 'pcu')
 	{
 		state_pcu = Math.floor(num);
 
-		update_separation_rating ();
+		update_score ();
+	}
+
+	if (category == 'seg')
+	{
+		state_seg = Math.floor(num);
+
+		update_widths ();
+
+		update_buttons ('ped', state_ped);
+		update_score ();
 	}
 
 	if (category == 'bar')
 	{
 		state_bar = Math.floor(num);
 
-		update_effectiveness_rating ();
-	}
-
-	if (category == 'sur')
-	{
-		state_sur = Math.floor(num);
-
-		update_effectiveness_rating ();
+		update_score ();
 	}
 
 	if (category == 'dir')
 	{
 		state_dir = Math.floor(num);
 
-		update_effectiveness_rating ();
+		update_score ();
+	}
+
+	if (category == 'sur')
+	{
+		state_sur = Math.floor(num);
+
+		update_score ();
 	}
 
 	if (category == 'ped')
 	{
 		state_ped = Math.floor(num);
 
-		update_effectiveness_rating ();
+		update_score ();
 	}
 
 	if (category == 'wid')
 	{
 		state_wid = Math.floor(num);
 
-		update_effectiveness_rating ();
+		update_score ();
 	}
 
 	update_buttons (category, num);
-
-	update_table_row_backgrounds ();
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -603,7 +715,15 @@ function update_buttons (category, num)
 		var bcn = buttons[i].id.split(" ");
 		if (bcn[0] == category)
 		{
-			if (((state_inf == 1) && (category == 'msl')) || ((state_inf == 1) && (category == 'pcu')))
+			if (((state_inf == 1) && (category == 'msl')) ||
+				((state_inf == 1) && (category == 'pcu')) ||
+				((state_inf == 1) && (category == 'ped') && (state_seg != 3)) ||
+				((state_inf >= 2) && (state_inf <= 7) && (category == 'seg')) ||
+				((state_inf >= 2) && (state_inf <= 7) && (category == 'bar')) ||
+				((state_inf >= 2) && (state_inf <= 7) && (category == 'ped')) ||
+				((state_inf == 2) && (category == 'wid')) ||
+				((state_inf == 7) && (category == 'msl')) ||
+				((state_inf == 7) && (category == 'pcu')))
 			{
 				buttons[i].style.backgroundColor = '#fff';
 				buttons[i].style.color = '#ddd';
@@ -629,119 +749,6 @@ function update_buttons (category, num)
 //////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////
 
-function update_table_row_backgrounds ()
-{
-	var table_rows = document.getElementsByTagName ("tr");
-	var highlight_color = '#fff';
-	var no_highlight_color = '#fff';
-
-	for (var i = 0; i < table_rows.length; i ++)
-	{
-		var tr = table_rows[i];
-		var names = tr.className.split (' ');
-
-		if (names[0] == 'inf')
-		{
-			if (state_inf == 0)
-			{
-				tr.style.backgroundColor = highlight_color;
-			}
-			else
-			{
-				tr.style.backgroundColor = no_highlight_color;
-			}
-		}
-
-		if (names[0] == 'msl')
-		{
-			if (state_msl == 0)
-			{
-				tr.style.backgroundColor = highlight_color;
-			}
-			else
-			{
-				tr.style.backgroundColor = no_highlight_color;
-			}
-		}
-
-		if (names[0] == 'pcu')
-		{
-			if (state_pcu == 0)
-			{
-				tr.style.backgroundColor = highlight_color;
-			}
-			else
-			{
-				tr.style.backgroundColor = no_highlight_color;
-			}
-		}
-
-		if (names[0] == 'bar')
-		{
-			if (state_bar == 0)
-			{
-				tr.style.backgroundColor = highlight_color;
-			}
-			else
-			{
-				tr.style.backgroundColor = no_highlight_color;
-			}
-		}
-
-		if (names[0] == 'dir')
-		{
-			if (state_dir == 0)
-			{
-				tr.style.backgroundColor = highlight_color;
-			}
-			else
-			{
-				tr.style.backgroundColor = no_highlight_color;
-			}
-		}
-
-		if (names[0] == 'sur')
-		{
-			if (state_sur == 0)
-			{
-				tr.style.backgroundColor = highlight_color;
-			}
-			else
-			{
-				tr.style.backgroundColor = no_highlight_color;
-			}
-		}
-
-		if (names[0] == 'ped')
-		{
-			if (state_ped == 0)
-			{
-				tr.style.backgroundColor = highlight_color;
-			}
-			else
-			{
-				tr.style.backgroundColor = no_highlight_color;
-			}
-		}
-
-		if (names[0] == 'wid')
-		{
-			if (state_wid == 0)
-			{
-				tr.style.backgroundColor = highlight_color;
-			}
-			else
-			{
-				tr.style.backgroundColor = no_highlight_color;
-			}
-		}
-	}
-}
-
-//////////////////////////////////////////////////////////////////////////////
-//////////////////////////////////////////////////////////////////////////////
-//////////////////////////////////////////////////////////////////////////////
-
 function body_onload ()
 {
 	var buttons = document.getElementsByTagName ("button");
@@ -750,8 +757,6 @@ function body_onload ()
 	{
 		buttons[i].addEventListener ("click", click_button, false);
 	}
-
-	update_table_row_backgrounds ();
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -761,28 +766,34 @@ function body_onload ()
 		</script>
 	</head>
 <body onload="body_onload ();">
+	<h1>Cycling Environment Assessment Tool</h1>
 	<table>
 		<tbody>
-		<tr><td class="header" colspan="2"><span style="font-size: 32px; font-weight: bold;">Cycling Environment Assessment Tool </span>
-		<span style="font-size: 14px;> <a href=""></a><a href="./">clear</a> <a href="./guide/" target="_blank">guide</a>  <a href="./spec/" target="_blank">specifications</a></span><hr></td></tr>
 		<tr id="separation" class="header" style="background-color: rgb(255, 255, 255);">
-		<td class="header" colspan="2"><b>Separation from Motors: <span id="separation_rating"></span></b></td>
+		<td class="header" colspan="2"><hr>Separation from Motors: <span id="separation_rating"></span></td>
 		</tr>
 		<tr class="inf" style="background-color: rgb(255, 255, 255);">
 			<td class="left_element">Type of Cycling<br>Infrastructure</td>
 			<td>
-				<button class="button7" id="inf 1" title="Motor-free shared-use path or footway">Motor-Free Path/Footway</button>
+				<button class="button7" id="inf 1" title="Traffic free cycling path">Traffic Free Path</button>
 				<button class="button7" id="inf 2" title="No cycle lane">Road without Infrastructure</button>
 				<button class="button7" id="inf 3" title="Advisory Cycle Lane">Advisory Cycle Lane</button>
 				<button class="button7" id="inf 4" title="Mandatory Cycle Lane">Mandatory Cycle Lane</button>
-				<button class="button7" id="inf 5" title="Hybrid Cycleway, raised with a forgiving kerb">Hybrid Cycleway</button>
-				<button class="button7" id="inf 6" title="Fixed objects between Cycleway & motor traffic">Light Protection</button>
-				<button class="button7" id="inf 7" title="Kerbed protection (or 4m+ spatial separation)">High Protection</button>
+				<button class="button7" id="inf 5" title="Hybrid or Stepped Cycle Lane">Hybrid Cycle Lane</button>
+				<button class="button7" id="inf 6" title="Objects between motor traffic and cycle taffic">Light Protection</button>
+				<button class="button7" id="inf 7" title="Kerb segregation (or &gt;4m spatial separation)">High Protection</button>
+			</td>
+
+		</tr><tr id="infra" class="msl" style="background-color: rgb(255, 255, 255);">
+			<td class="left_element">Speed Limit</td>
+			<td>
+				<button class="button3" id="msl 1">20 mph or below</button>
+				<button class="button3" id="msl 2">30 mph</button>
+				<button class="button3" id="msl 3">40 mph or above</button>
 			</td>
 		
-		</tr>
-		<tr id="infra" class="pcu" style="background-color: rgb(255, 255, 255);">
-			<td class="left_element">Motor PCUs/day</td>
+		</tr><tr id="infra" class="pcu" style="background-color: rgb(255, 255, 255);">
+			<td class="left_element">Motor Vehicles<br>(PCUs/day)</td>
 			<td>
 				<button class="button5" id="pcu 1">less than 1,000</button>
 				<button class="button5" id="pcu 2">1,000 to 2,000</button>
@@ -790,54 +801,42 @@ function body_onload ()
 				<button class="button5" id="pcu 4">5,000 to 10,000</button>
 				<button class="button5" id="pcu 5">more than 10,000</button>
 			</td>
-		</tr>
-		<tr id="infra" class="msl" style="background-color: rgb(255, 255, 255);">
-			<td class="left_element">Speed Limit</td>
-			<td>
-				<button class="button3" id="msl 1">20 mph or below</button>
-				<button class="button3" id="msl 2">30 mph</button>
-				<button class="button3" id="msl 3">40 mph or above</button>
-			</td>
+
 		</tr>
 		<tr id="effective" class="header" style="background-color: rgb(255, 255, 255);">
-		<td class="header" colspan="2"><b>Effectiveness: <span id="effectiveness_rating"></span></b></td>
+		<td class="header" colspan="2"><hr>Effectiveness: <span id="effectiveness_rating"></span></td>
 		</tr>
-		<tr class="way" style="background-color: rgb(255, 255, 255);">
+
+		<tr id="road" class="seg" style="background-color: rgb(255, 255, 255);">
 			<td class="left_element">1-way or 2-way</td>
 			<td>
-				<button class="button3" id="way 1">(Segregated) 1-way</button>
-				<button class="button3" id="way 2">(Segregated) 2-way</button>
-				<button class="button3" id="way 3">Shared-use 2-way</button>
+				<button class="button3" id="seg 1">(Segregated) 1-way</button>
+				<button class="button3" id="seg 2">(Segregated) 2-way</button>
+				<button class="button3" id="seg 3">Shared-use 2-way</button>
 			</td>
-		</tr>
-		<tr class="ped" style="background-color: rgb(255, 255, 255);">
-			<td class="left_element">Pedestrians</td>
+
+		<tr id="road" class="bar" style="background-color: rgb(255, 255, 255);">
+			<td class="left_element">Barriers</td>
 			<td>
-				<button class="button4" id="ped 4">fewer than 100 per hour</button>
-				<button class="button4" id="ped 3">100 to 160 per hour</button>
-				<button class="button4" id="ped 2">160 to 200 per hour</button>
-				<button class="button4" id="ped 1">more than 200 per hour</button>
+				<button class="button5" id="bar 5">none or &gt;1.5m gap</button>
+				<button class="button5" id="bar 4">1.2m to 1.5m gap</button>
+				<button class="button5" id="bar 3">0.8m to 1.2m gap</button>
+				<button class="button5" id="bar 2">0.6m to 0.8m gap </button>
+				<button class="button5" id="bar 1">gate or &lt;0.6m gap</button>
 			</td>
-		</tr>
-		<tr class="day" style="background-color: rgb(255, 255, 255);">
-			<td class="left_element">Social Safety (day)</td>
+
+		</tr><tr class="dir" style="background-color: rgb(255, 255, 255);">
+			<td class="left_element">Directness</td>
 			<td>
-				<button class="button2" id="day 5">fine</button>
-				<button class="button2" id="day 3">uncomfortable</button>
+				<button class="button5" id="dir 5">shortest</button>
+				<button class="button5" id="dir 4">within 10%</button>
+				<button class="button5" id="dir 3">within 25%</button>
+				<button class="button5" id="dir 2">within 50%</button>
+				<button class="button5" id="dir 1">over 50% longer</button>
 			</td>
-		</tr>
-		<tr class="nit" style="background-color: rgb(255, 255, 255);">
-			<td class="left_element">Night-time Safety</td>
-			<td>
-				<button class="button5" id="nit 5">lit and fine</button>
-				<button class="button5" id="nit 4">unlit but ok</button>
-				<button class="button5" id="nit 3">lit but uncomfy</button>
-				<button class="button5" id="nit 2">unlit and uncomfy</button>
-				<button class="button5" id="nit 1">locked</button>
-			</td>
-		</tr>
-		<tr class="sur" style="background-color: rgb(255, 255, 255);">
-			<td class="left_element">Surface Quality</td>
+
+		</tr><tr class="sur" style="background-color: rgb(255, 255, 255);">
+			<td class="left_element">Surface</td>
 			<td>
 				<button class="button5" id="sur 5">very smooth</button>
 				<button class="button5" id="sur 4">smooth</button>
@@ -846,90 +845,40 @@ function body_onload ()
 				<button class="button5" id="sur 1">loose or muddy</button>
 			</td>
 		
-		</tr>
-		<tr class="wid" style="background-color: rgb(255, 255, 255);">
-			<td class="left_element">Effective Width</td>
+		</tr><tr id="road" class="ped" style="background-color: rgb(255, 255, 255);">
+			<td class="left_element">Pedestrians<br>(peds/hour)</td>
 			<td>
-				<button class="button5" id="wid 1">Sub-standard</button>
-				<button class="button5" id="wid 2">Minimum</button>
-				<button class="button5" id="wid 3">Compromised</button>
-				<button class="button5" id="wid 4">Efficient</button>
-				<button class="button5" id="wid 5">Future-proof</button>
+				<button class="button5" id="ped 5">less than 100</button>
+				<button class="button5" id="ped 4">100 to 160</button>
+				<button class="button5" id="ped 3">160 to 320</button>
+				<button class="button5" id="ped 2">320 to 400</button>
+				<button class="button5" id="ped 1">over 400</button>
 			</td>
-		</tr>
-		<tr class="wid-cl" style="background-color: rgb(255, 255, 255);">
-			<td class="left_element">ACL/MCL (1-way)</td>
-			<td>
-				<button class="button5" id="wid 1">&lt;1.5m</button>
-				<button class="button5" id="wid 2">1.5m</button>
-				<button class="button5" id="wid 3">1.6m to 1.7m</button>
-				<button class="button5" id="wid 4">1.8m to 2.0m</button>
-				<button class="button5" id="wid 5">2.1m+</button>
-			</td>
-		</tr>
-		<tr class="wid-c1" style="background-color: rgb(255, 255, 255);">
-			<td class="left_element">Cycleway (1-way)</td>
-			<td>
-				<button class="button5" id="wid 1">&lt;1.5m</button>
-				<button class="button5" id="wid 2">1.5m to 1.7m</button>
-				<button class="button5" id="wid 3">1.8m to 2.0m</button>
-				<button class="button5" id="wid 4">2.1m to 2.4m</button>
-				<button class="button5" id="wid 5">2.5m+</button>
-			</td>
-		</tr>
-		<tr class="wid-su" style="background-color: rgb(255, 255, 255);">
-			<td class="left_element">Shared-use (2-way)</td>
-			<td>
-				<button class="button5" id="wid 1">&lt;1.8m</button>
-				<button class="button5" id="wid 2">1.8m to 2.5m</button>
-				<button class="button5" id="wid 3">2.6m to 3.1m</button>
-				<button class="button5" id="wid 4">3.2m to 3.9m</button>
-				<button class="button5" id="wid 5">4.0m+</button>
-			</td>
-		</tr>
-		<tr class="wid-c2" style="background-color: rgb(255, 255, 255);">
-			<td class="left_element">Cycleway (2-way)</td>
-			<td>
-				<button class="button5" id="wid 1">&lt;2.5m</button>
-				<button class="button5" id="wid 2">2.5m to 2.9m</button>
-				<button class="button5" id="wid 3">3.0m to 3.4m</button>
-				<button class="button5" id="wid 4">3.5m to 3.9m</button>
-				<button class="button5" id="wid 5">4.0m+</button>
-			</td>
-		</tr>
 		
-		<tr id="footer" class="header" style="background-color: rgb(255, 255, 255);">
-		<td class="header" colspan="2">
-		<span style="font-size: 46px;" id="overall_score">&nbsp;Score: </span>&nbsp;&nbsp;<span id="overall_description" style="font-size: 30px;"></span><hr>
-		<span style="font-size: 25px;" id="analysis"></span>
-		</td></tr>
-		
-		<tr><td class="header" colspan="2" align="center"><img src="./Cyclenation_Logo_2015_880x256.png"></td></tr>
-		
-		<tr id="junctions" class="header" style="background-color: rgb(255, 255, 255);">
-		<td class="header" colspan="2"><b>Moved to junctions tool: <span id="junctions_placeholder"></span></b></td>
-		</tr>
-		<tr class="bar" style="background-color: rgb(255, 255, 255);">
-			<td class="left_element">Access Barriers</td>
+		</tr><tr id="widths" class="wid" style="background-color: rgb(255, 255, 255);">
+			<td class="left_element">Effective Width</td> <!-- one-way on-road -->
 			<td>
-				<button class="button5" id="bar 1">gate or &lt;0.6m gap</button>
-				<button class="button5" id="bar 2">0.6m to 0.8m gap </button>
-				<button class="button5" id="bar 3">0.8m to 1.2m gap</button>
-				<button class="button5" id="bar 4">1.2m to 1.5m gap</button>
-				<button class="button5" id="bar 5">none or &gt;1.5m gap</button>
+				<button class="button5t" id="wid 5">Future-proof</button>
+				<button class="button5t" id="wid 4">Efficient</button>
+				<button class="button5t" id="wid 3">Compromised</button>
+				<button class="button5t" id="wid 2">Minimum</button>
+				<button class="button5t" id="wid 1">Sub-standard</button>
 			</td>
-		</tr>
-		<tr id="computed" class="header" style="background-color: rgb(255, 255, 255);">
-		<td class="header" colspan="2"><b>To be computed: <span id="computed_placeholder"></span></b></td>
-		</tr>
-		<tr class="dir" style="background-color: rgb(255, 255, 255);">
-			<td class="left_element">Directness</td>
-			<td>
-				<button class="button4" id="dir 4">within 10%</button>
-				<button class="button4" id="dir 3">within 25%</button>
-				<button class="button4" id="dir 2">within 40%</button>
-				<button class="button4" id="dir 1">over 40% longer</button>
+
+		</tr><tr id="footer" class="header" style="background-color: rgb(255, 255, 255);">
+			<td class="header" colspan="2"><hr>
+				<span style="font-size: 44px;" id="overall_score">Score </span>&nbsp;&nbsp;<span id="overall_description" style="font-size: 30px;"></span><p>
+				<hr>
+				<span style="font-size: 25px;" id="analysis"></span>
+<!--
+				<hr>
+				Separation of Motors Score : <span id="separation_rating"></span><br>
+				Effectiveness Score : <span id="effectiveness_rating"></span>
+				<hr>
+				<span id="detailed_scores"></span>
+-->
 			</td>
 		</tr>
 	</tbody></table>
+	<img src="./Cyclenation_Logo_2015_880x256.png">
 </body></html>
