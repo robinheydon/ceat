@@ -541,11 +541,11 @@ function update_widths ()
 	{
 		but.innerHTML = "Effective Width";
 
-		but5.innerHTML = "Future-proof";
-		but4.innerHTML = "Efficient";
-		but3.innerHTML = "Compromised";
-		but2.innerHTML = "Minimum";
-		but1.innerHTML = "Sub-standard";
+		but5.innerHTML = "future-proof";
+		but4.innerHTML = "efficient";
+		but3.innerHTML = "compromised";
+		but2.innerHTML = "minimum";
+		but1.innerHTML = "sub-standard";
 	}
 	else if (width_type == 1) // ACL/MCL one way
 	{
@@ -555,7 +555,7 @@ function update_widths ()
 		but4.innerHTML = "1.8m to 2.0m";
 		but3.innerHTML = "1.6m to 1.7m";
 		but2.innerHTML = "1.5m";
-		but1.innerHTML = "1.4m or less";
+		but1.innerHTML = "up to 1.4m";
 	}
 	else if (width_type == 2) // Segregated Cycleway one way
 	{
@@ -565,7 +565,7 @@ function update_widths ()
 		but4.innerHTML = "2.1m to 2.4m";
 		but3.innerHTML = "1.8m to 2.0m";
 		but2.innerHTML = "1.5 to 1.7m";
-		but1.innerHTML = "1.4m or less";
+		but1.innerHTML = "up to 1.4m";
 	}
 	else if (width_type == 3) // Segregated Cycleway two way
 	{
@@ -575,7 +575,7 @@ function update_widths ()
 		but4.innerHTML = "3.5m to 3.9m";
 		but3.innerHTML = "2.6m to 3.4m";
 		but2.innerHTML = "2.1 to 2.5m";
-		but1.innerHTML = "2.0m or less";
+		but1.innerHTML = "up to 2.0m";
 	}
 	else if (width_type == 4) // Shared-use one-way
 	{
@@ -585,7 +585,7 @@ function update_widths ()
 		but4.innerHTML = "3.5m to 3.9m";
 		but3.innerHTML = "2.6m to 3.4m";
 		but2.innerHTML = "2.1 to 2.5m";
-		but1.innerHTML = "2.0m or less";
+		but1.innerHTML = "up to 2.0m";
 	}
 	else if (width_type == 5) // Shared-use one-way
 	{
@@ -595,7 +595,7 @@ function update_widths ()
 		but4.innerHTML = "3.5m to 3.9m";
 		but3.innerHTML = "3.0m to 3.4m";
 		but2.innerHTML = "2.5 to 2.9m";
-		but1.innerHTML = "2.5m or less";
+		but1.innerHTML = "up to 2.5m";
 	}
 }
 
@@ -860,35 +860,35 @@ function body_onload ()
 		</tr>
 
 		<tr class="sur" style="background-color: rgb(255, 255, 255);">
-			<td class="left_element">Surface</td>
+			<td class="left_element">Surface Quality</td>
 			<td>
-				<button class="button5" id="sur 5">very smooth</button>
-				<button class="button5" id="sur 4">smooth</button>
-				<button class="button5" id="sur 3">lumpy</button>
-				<button class="button5" id="sur 2">unsealed</button>
 				<button class="button5" id="sur 1">loose or muddy</button>
+				<button class="button5" id="sur 2">unsealed</button>
+				<button class="button5" id="sur 3">lumpy</button>
+				<button class="button5" id="sur 4">smooth</button>
+				<button class="button5" id="sur 5">very smooth</button>
 			</td>
 		</tr>
 
 		<tr id="ped" class="ped" style="background-color: rgb(255, 255, 255);">
 			<td class="left_element">Pedestrians<br>(peds/hour)</td>
 			<td>
-				<button class="button5" id="ped 5">segregated<br>no pedestrians</button>
-				<button class="button5" id="ped 4">fewer than 100<br>per hour</button>
-				<button class="button5" id="ped 3">100 to 160<br>per hour</button>
-				<button class="button5" id="ped 2">160 to 200<br>per hour</button>
 				<button class="button5" id="ped 1">over 200<br>per hour</button>
+				<button class="button5" id="ped 2">160 to 200<br>per hour</button>
+				<button class="button5" id="ped 3">100 to 160<br>per hour</button>
+				<button class="button5" id="ped 4">fewer than 100<br>per hour</button>
+				<button class="button5" id="ped 5">segregated<br>no pedestrians</button>
 			</td>
 		</tr>
 
 		<tr id="wid" class="wid" style="background-color: rgb(255, 255, 255);">
 			<td class="left_element" id="width_label">Effective Width</td>
 			<td>
-				<button class="button5" id="wid 5">Future-proof</button>
-				<button class="button5" id="wid 4">Efficient</button>
-				<button class="button5" id="wid 3">Compromised</button>
-				<button class="button5" id="wid 2">Minimum</button>
-				<button class="button5" id="wid 1">Sub-standard</button>
+				<button class="button5" id="wid 1">sub-standard</button>
+				<button class="button5" id="wid 2">minimum</button>
+				<button class="button5" id="wid 3">compromised</button>
+				<button class="button5" id="wid 4">efficient</button>
+				<button class="button5" id="wid 5">future-proof</button>
 			</td>
 		</tr>
 
