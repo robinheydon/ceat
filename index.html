@@ -158,6 +158,7 @@ var pcus = [
 function analyse_failure (element, overall_score)
 {
 	var text = '';
+	var and = '';
 
 	var scores = calculate_score (
 		state_inf, state_msl, state_pcu,
@@ -167,147 +168,45 @@ function analyse_failure (element, overall_score)
 	{
 		if (state_nit == 1)
 		{
-			text += 'Allow use at night.<br>';
+			text += and + 'Allow use at night';
+			and = '; ';
 		}
 		else
 		{
-			text += 'Improve night time safety.<br>';
+			text += and + 'Improve night time safety';
+			and = '; ';
 		}
 	}
 	if (scores[2] < 4)
 	{
-		text += 'Improve separation from motors.<br>';
+		text += and + 'Improve separation from motors';
+		and = '; ';
 	}
 	if (scores[3] < 4)
 	{
 		if (state_sur < 4)
 		{
-			text += 'Improve surface quality.<br>';
+			text += and + 'Improve surface quality';
+			and = '; ';
 		}
 		if (state_ped < 4)
 		{
-			text += 'Reduce conflicts with pedestrians.<br>';
+			text += and + 'Reduce conflicts with pedestrians';
+			and = '; ';
 		}
 		if (state_wid < 4)
 		{
-			text += 'Increase effective width.<br>';
+			text += and + 'Increase effective width';
+			and = '; ';
 		}
 		if (state_day < 4)
 		{
-			text += 'Increase social safety.<br>';
+			text += and + 'Increase social safety';
+			and = '; ';
 		}
 	}
 
 	element.innerHTML = text;
-
-/*
-	if (overall_score < 5)
-	{
-		var permutations = [];
-
-		if (state_inf == 1) // traffic free-path
-		{
-			for (var i3 = state_sur; i3 <= 5; i3 ++)
-			{
-				for (var i4 = state_ped; i4 <= 5; i4 ++)
-				{
-					for (var i5 = state_wid; i5 <= 5; i5 ++)
-					{
-						permutations.push ([state_inf, state_msl, state_pcu, i3, i4, i5]);
-					}
-				}
-			}
-		}
-		else // (state_inf > 1) // on-road
-		{
-			for (var r1 = state_inf; r1 <= 7; r1 ++)
-			{
-				for (var r2 = state_msl; r2 >= 1; r2 --)
-				{
-					for (var r3 = state_pcu; r3 >= 1; r3 --)
-					{
-						for (var i3 = state_sur; i3 <= 5; i3 ++)
-						{
-							for (var i4 = state_ped; i4 <= 5; i4 ++)
-							{
-								for (var i5 = state_wid; i5 <= 5; i5 ++)
-								{
-									permutations.push ([r1, r2, r3, i3, i4, i5]);
-								}
-							}
-						}
-					}
-				}
-			}
-		}
-
-		var best_score = overall_score;
-
-		for (var i = 0; i < permutations.length; i ++)
-		{
-			var r1 = permutations[i][0]; // inf
-			var r2 = permutations[i][1]; // msl
-			var r3 = permutations[i][2]; // pcu
-			var i3 = permutations[i][3]; // sur
-			var i4 = permutations[i][4]; // ped
-			var i5 = permutations[i][5]; // wid
-
-			score = calculate_score (r1, r2, r3, i3, i4, i5)[0];
-
-			if (score > best_score)
-			{
-				var text = '';
-				var and = '';
-
-				if ((r1 != state_inf) || (r2 != state_msl) || (r3 != state_pcu))
-				{
-					text += and + 'improve separation from motors';
-					and = ', and ';
-				}
-
-				if (i3 != state_sur)
-				{
-					text += and + 'improve surface quality';
-					and = ', and ';
-				}
-
-				if (i4 != state_ped)
-				{
-					text += and + 'reduce conflicts with pedestrians';
-					and = ', and ';
-				}
-
-				if (i5 != state_wid)
-				{
-					text += and + 'increase effective width';
-					and = ', and ';
-				}
-
-				text += '.';
-
-				suggestions[score].push (text);
-
-				best_score = score;
-			}
-		}
-	}
-
-	var html = '';
-
-	for (var i = 5; i > overall_score; i --)
-	{
-		if (suggestions[i].length)
-		{
-			html += 'To obtain score of ' + i + '/5, ';
-			for (var j = 0; j < suggestions[i].length; j ++)
-			{
-				html += suggestions[i][j] + '<br><br>';
-			}
-		}
-	}
-
-	element.innerHTML = html;
-*/
 }
 
 //////////////////////////////////////////////////////////////////////////////
