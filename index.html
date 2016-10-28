@@ -73,6 +73,8 @@ var state_seg = 0;
 var state_sur = 0;
 var state_ped = 0;
 var state_wid = 0;
+var state_day = 0;
+var state_nit = 0;
 var effectiveness_rating = -1;
 
 var overall_score = 0;
@@ -108,19 +110,22 @@ var separation_ratings = {
 };
 
 var rating_labels = [
-		'Complete failure: Low-',
-		'Unacceptable: Low',
-		'Very poor: Medium',
-		'Good practice: High',
-		'World class: High+'
+		'FAIL',
+		'Low-',
+		'Low',
+		'Medium',
+		'High',
+		'High+'
 	];
 
 var overall_scores = {
-	0: [0, 0, 0, 0, 0],
-	1: [0, 1, 2, 2, 2],
-	2: [0, 2, 3, 3, 3],
-	3: [0, 2, 3, 4, 4],
-	4: [0, 2, 3, 4, 5]
+	//  0  1  2  3  4  5
+	0: [0, 0, 0, 0, 0, 0],
+	1: [0, 0, 1, 1, 1, 1],
+	2: [0, 1, 2, 2, 2, 2],
+	3: [0, 1, 2, 3, 3, 3],
+	4: [0, 1, 2, 3, 4, 4],
+	5: [0, 1, 2, 3, 4, 5]
 };
 
 var overall_descriptions = [
@@ -150,12 +155,52 @@ var pcus = [
 //////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////
 
-function analyse_failure (element)
+function analyse_failure (element, overall_score)
 {
-	var score;
-	var best_score;
-	var suggestions = {1: [], 2: [], 3: [], 4: [], 5: []};
+	var text = '';
 
+	var scores = calculate_score (
+		state_inf, state_msl, state_pcu,
+		state_sur, state_ped, state_wid, state_day, state_nit);
+
+	if (scores[0] > scores[1])
+	{
+		if (state_nit == 1)
+		{
+			text += 'Allow use at night.<br>';
+		}
+		else
+		{
+			text += 'Improve night time safety.<br>';
+		}
+	}
+	if (scores[2] < 4)
+	{
+		text += 'Improve separation from motors.<br>';
+	}
+	if (scores[3] < 4)
+	{
+		if (state_sur < 4)
+		{
+			text += 'Improve surface quality.<br>';
+		}
+		if (state_ped < 4)
+		{
+			text += 'Reduce conflicts with pedestrians.<br>';
+		}
+		if (state_wid < 4)
+		{
+			text += 'Increase effective width.<br>';
+		}
+		if (state_day < 4)
+		{
+			text += 'Increase social safety.<br>';
+		}
+	}
+
+	element.innerHTML = text;
+
+/*
 	if (overall_score < 5)
 	{
 		var permutations = [];
@@ -214,27 +259,15 @@ function analyse_failure (element)
 				var text = '';
 				var and = '';
 
-				if (r1 != state_inf)
+				if ((r1 != state_inf) || (r2 != state_msl) || (r3 != state_pcu))
 				{
-					text += and + 'improve cycling infrastructure type';
-					and = ', and ';
-				}
-
-				if (r2 != state_msl)
-				{
-					text += and + 'reduce maximum speed';
-					and = ', and ';
-				}
-
-				if (r3 != state_pcu)
-				{
-					text += and + 'reduce maximum number of vehicles';
+					text += and + 'improve separation from motors';
 					and = ', and ';
 				}
 
 				if (i3 != state_sur)
 				{
-					text += and + 'improve surface';
+					text += and + 'improve surface quality';
 					and = ', and ';
 				}
 
@@ -274,6 +307,7 @@ function analyse_failure (element)
 	}
 
 	element.innerHTML = html;
+*/
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -284,17 +318,22 @@ function update_score ()
 {
 	var scores = calculate_score (
 			state_inf, state_msl, state_pcu,
-			state_sur, state_ped, state_wid
+			state_sur, state_ped, state_wid, state_day, state_nit
 		);
 
-	overall_score = scores[0];
-	separation_rating = scores[1];
-	effectiveness_rating = scores[2];
+	var overall_score = scores[0];
+	var night_score = scores[1];
+	var separation_rating = scores[2];
+	var effectiveness_rating = scores[3];
+
+	// console.log (scores);
 
 	var separation_element = document.getElementById ('separation_rating');
 	var effectiveness_element = document.getElementById ('effectiveness_rating');
 	var score_element = document.getElementById ('overall_score');
+	var night_score_element = document.getElementById ('night_score');
 	var description_element = document.getElementById ('overall_description');
+	var night_description_element = document.getElementById ('night_description');
 	var detailed_element = document.getElementById ('detailed_scores');
 	var analysis_element = document.getElementById ('analysis');
 
@@ -302,8 +341,21 @@ function update_score ()
 	{
 		separation_element.innerHTML = rating_labels[separation_rating];
 		effectiveness_element.innerHTML = rating_labels[effectiveness_rating];
-		score_element.innerHTML = 'Score ' + overall_score + '/5';
-		description_element.innerHTML = overall_descriptions[overall_score];
+
+		if (night_score < overall_score)
+		{
+			score_element.innerHTML = 'Score ' + overall_score + '/5';
+			description_element.innerHTML = overall_descriptions[overall_score];
+			night_score_element.innerHTML = '<br>Night Score ' + night_score + '/5';
+			night_description_element.innerHTML = overall_descriptions[night_score];
+		}
+		else
+		{
+			score_element.innerHTML = 'Score ' + overall_score + '/5';
+			description_element.innerHTML = overall_descriptions[overall_score];
+			night_score_element.innerHTML = '';
+			night_description_element.innerHTML = '';
+		}
 
 		if (detailed_element)
 		{
@@ -318,11 +370,18 @@ function update_score ()
 			detailed_element.innerHTML += "sep:" + rating_labels[separation_rating] + ", eff:" + rating_labels[effectiveness_rating];
 		}
 
-		analyse_failure (analysis_element);
+		analyse_failure (analysis_element, overall_score);
 	}
 	else
 	{
-		separation_element.innerHTML = '';
+		if (separation_rating >= 0)
+		{
+			separation_element.innerHTML = rating_labels[separation_rating];
+		}
+		else
+		{
+			separation_element.innerHTML = '';
+		}
 		effectiveness_element.innerHTML = '';
 		score_element.innerHTML = 'Score ';
 		description_element.innerHTML = '';
@@ -340,7 +399,7 @@ function update_score ()
 //////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////
 
-function calculate_score (inf, msl, pcu, sur, ped, wid)
+function calculate_score (inf, msl, pcu, sur, ped, wid, day, nit)
 {
 	var sep;
 	var eff;
@@ -363,7 +422,7 @@ function calculate_score (inf, msl, pcu, sur, ped, wid)
 
 	if ((inf == 1) || (inf == 7)) // doesn't matter with the speed or pcus is
 	{
-		sep = 4; // High +
+		sep = 5; // High +
 	}
 	else
 	{
@@ -371,23 +430,27 @@ function calculate_score (inf, msl, pcu, sur, ped, wid)
 
 		if (inf > requirements[2])
 		{
-			sep = 4; // High +
+			sep = 5; // High +
 		}
 		else if (inf == requirements[2])
 		{
-			sep = 3; // High
+			sep = 4; // High
 		}
 		else if (inf >= requirements[1])
 		{
-			sep = 2; // Medium
+			sep = 3; // Medium
 		}
 		else if (inf >= requirements[0])
 		{
-			sep = 1; // Low
+			sep = 2; // Low
+		}
+		else if (inf >= requirements[0] - 1)
+		{
+			sep = 1; // Low-
 		}
 		else
 		{
-			sep = 0; // Low-
+			sep = 0; // FAIL
 		}
 	}
 
@@ -411,15 +474,24 @@ function calculate_score (inf, msl, pcu, sur, ped, wid)
 		ped = 5
 	}
 
-	if ((seg == 0) || (sur == 0) || (ped == 0) || (wid == 0))
+	if ((seg == 0) || (sur == 0) || (ped == 0) || (wid == 0) || (day == 0) || (nit == 0))
 	{
-		// console.log ("score : " + -1 + "," + -1 + "," + -1 + " allzeros")
-		return [-1, -1, -1];
+		// console.log ("score : " + -1 + "," + sep + "," + -1 + " allzeros")
+		return [-1, sep, -1];
 	}
 
-	eff = Math.min (sur, ped, wid) - 1;
+	if (nit == 1) // route closed at night - instant FAIL
+	{
+		nit = 0;
+	}
+
+	eff = Math.min (sur, ped, wid, day);
 
 	score = overall_scores[sep][eff];
+
+	neff = Math.min (sur, ped, wid, nit);
+
+	night_score = overall_scores[sep][neff];
 
 	if (score == 1) // check for a downgrade if really bad
 	{
@@ -435,13 +507,31 @@ function calculate_score (inf, msl, pcu, sur, ped, wid)
 		if (badness >= 2)
 		{
 			// console.log ("Score changed to 0");
+			eff = 0;
 			score = 0;
 		}
 	}
 	
-	// console.log ("score : " + score + "," + sep + "," + eff)
+	if (night_score == 1) // check for a downgrade if really bad
+	{
+		var badness = 0;
 
-	return [score, sep, eff];
+		if (sur <= 1) { badness += 1; }
+		if (ped <= 1) { badness += 1; }
+		if (wid <= 1) { badness += 1; }
+
+		// console.log ("badness = " + badness);
+
+		// upgrade night_score to 1/5 if only one thing is not good
+		if (badness >= 2)
+		{
+			// console.log ("Score changed to 0");
+			night_score = 0;
+		}
+	}
+	
+	// console.log ("score : " + score + "," + sep + "," + eff)
+	return [score, night_score, sep, eff];
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -555,7 +645,7 @@ function update_widths ()
 		but4.innerHTML = "1.8m to 2.0m";
 		but3.innerHTML = "1.6m to 1.7m";
 		but2.innerHTML = "1.5m";
-		but1.innerHTML = "up to 1.4m";
+		but1.innerHTML = "1.4m or worse";
 	}
 	else if (width_type == 2) // Segregated Cycleway one way
 	{
@@ -565,7 +655,7 @@ function update_widths ()
 		but4.innerHTML = "2.1m to 2.4m";
 		but3.innerHTML = "1.8m to 2.0m";
 		but2.innerHTML = "1.5 to 1.7m";
-		but1.innerHTML = "up to 1.4m";
+		but1.innerHTML = "1.4m or worse";
 	}
 	else if (width_type == 3) // Segregated Cycleway two way
 	{
@@ -575,7 +665,7 @@ function update_widths ()
 		but4.innerHTML = "3.5m to 3.9m";
 		but3.innerHTML = "2.6m to 3.4m";
 		but2.innerHTML = "2.1 to 2.5m";
-		but1.innerHTML = "up to 2.0m";
+		but1.innerHTML = "2.0m or worse";
 	}
 	else if (width_type == 4) // Shared-use one-way
 	{
@@ -585,7 +675,7 @@ function update_widths ()
 		but4.innerHTML = "3.5m to 3.9m";
 		but3.innerHTML = "2.6m to 3.4m";
 		but2.innerHTML = "2.1 to 2.5m";
-		but1.innerHTML = "up to 2.0m";
+		but1.innerHTML = "2.0m or worse";
 	}
 	else if (width_type == 5) // Shared-use one-way
 	{
@@ -595,7 +685,7 @@ function update_widths ()
 		but4.innerHTML = "3.5m to 3.9m";
 		but3.innerHTML = "3.0m to 3.4m";
 		but2.innerHTML = "2.5 to 2.9m";
-		but1.innerHTML = "up to 2.5m";
+		but1.innerHTML = "2.5m or worse";
 	}
 }
 
@@ -620,6 +710,8 @@ function click_button (ev)
 		state_sur = 0;
 		state_ped = 0;
 		state_wid = 0;
+		state_day = 0;
+		state_nit = 0;
 
 		overall_score = 0;
 
@@ -637,6 +729,8 @@ function click_button (ev)
 		update_buttons ('sur', state_sur);
 		update_buttons ('ped', state_ped);
 		update_buttons ('wid', state_wid);
+		update_buttons ('day', state_day);
+		update_buttons ('nit', state_nit);
 
 		update_score ();
 	}
@@ -730,6 +824,20 @@ function click_button (ev)
 	if (category == 'wid')
 	{
 		state_wid = Math.floor(num);
+
+		update_score ();
+	}
+
+	if (category == 'day')
+	{
+		state_day = Math.floor(num);
+
+		update_score ();
+	}
+
+	if (category == 'nit')
+	{
+		state_nit = Math.floor(num);
 
 		update_score ();
 	}
@@ -892,9 +1000,29 @@ function body_onload ()
 			</td>
 		</tr>
 
+		<tr id="day" class="day" style="background-color: rgb(255, 255, 255);">
+			<td class="left_element" id="width_label">Social Safety (day)</td>
+			<td>
+				<button class="button2" id="day 5">fine</button>
+				<button class="button2" id="day 3">uncomfortable</button>
+			</td>
+		</tr>
+
+		<tr id="nit" class="nit" style="background-color: rgb(255, 255, 255);">
+			<td class="left_element" id="width_label">Night-time Safety</td>
+			<td>
+				<button class="button5" id="nit 5">lit and fine</button>
+				<button class="button5" id="nit 4">unlit but ok</button>
+				<button class="button5" id="nit 3">lit but uncomfy</button>
+				<button class="button5" id="nit 2">unlit and uncomfy</button>
+				<button class="button5" id="nit 1">route closed</button>
+			</td>
+		</tr>
+
 		<tr id="footer" class="header" style="background-color: rgb(255, 255, 255);">
 			<td class="header" colspan="2"><hr>
-				<span style="font-size: 44px;" id="overall_score">Score </span>&nbsp;&nbsp;<span id="overall_description" style="font-size: 30px;"></span><p>
+				<span style="font-size: 44px;" id="overall_score">Score </span>&nbsp;&nbsp;<span id="overall_description" style="font-size: 30px;"></span>
+				<span style="font-size: 44px;" id="night_score"></span>&nbsp;&nbsp;<span id="night_description" style="font-size: 30px;"></span><p>
 				<hr>
 				<span style="font-size: 25px;" id="analysis"></span>
 <!--
