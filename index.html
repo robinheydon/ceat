@@ -189,12 +189,12 @@ function analyse_failure (element, overall_score)
 			text += and + 'Improve surface quality';
 			and = '; ';
 		}
-		if (state_ped < 4)
+		if ((state_ped < 4) && (state_inf == 1))
 		{
-			text += and + 'Reduce conflicts with pedestrians';
+			text += and + 'Improve separation from pedestrians';
 			and = '; ';
 		}
-		if (state_wid < 4)
+		if ((state_wid < 4) && (state_inf != 2))
 		{
 			text += and + 'Increase effective width';
 			and = '; ';
@@ -204,6 +204,11 @@ function analyse_failure (element, overall_score)
 			text += and + 'Increase social safety';
 			and = '; ';
 		}
+	}
+
+	if (text != '')
+	{
+		text += '.';
 	}
 
 	element.innerHTML = text;
